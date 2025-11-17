@@ -13,8 +13,8 @@ namespace realtime_game.Server.Models.Entities
         [Key(2)]
         public string Token { get; set; }
         [Key(3)]
-        public DateTime Created_at { get;set; }
+        public DateTime created_at { get;set; }
         [Key(4)]
-        public DateTime Update_at { get;set; }
+        public DateTime updated_at { get;set; }
     }
 }

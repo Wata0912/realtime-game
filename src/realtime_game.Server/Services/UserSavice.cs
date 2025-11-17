@@ -23,9 +23,9 @@ namespace realtime_game.Server.Services
             //ユーザーテーブルにレコードを追加
             User user = new User();
             user.Name = name;
-            user.Token = "";
-            user.Created_at = DateTime.Now;
-            user.Update_at = DateTime.Now;
+            user.Token = Guid.NewGuid().ToString();
+            user.created_at = DateTime.Now;
+            user.updated_at = DateTime.Now;
             Console.WriteLine($"ユーザーネーム:{user.Name}");
             context.Users.Add(user);
             await context.SaveChangesAsync();           

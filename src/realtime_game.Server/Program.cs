@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using realtime_game.Server.StreamingHubs;
 var builder = WebApplication.CreateBuilder(args);
 var magiconion = builder.Services.AddMagicOnion();
 if (builder.Environment.IsDevelopment())
@@ -16,6 +17,7 @@ builder.Services.AddSwaggerGen(options => {
     });
 });
 builder.Services.AddMvcCore().AddApiExplorer();
+builder.Services.AddSingleton<RoomContextRepository>();
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
