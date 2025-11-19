@@ -12,7 +12,7 @@ namespace realtime_game.Shared.Interfaces.Services
     {
         UnaryResult<int> RegistUserAsync(string name);
 
-        UnaryResult<string> GetUserAsync(int id);
+        UnaryResult<User> GetUserAsync(int id);
 
         UnaryResult<string[]> GetAllUserAsync();
 

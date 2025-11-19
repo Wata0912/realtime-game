@@ -34,13 +34,11 @@ namespace realtime_game.Server.Services
         }
 
         //ユーザー情報取得
-        public async UnaryResult<string> GetUserAsync(int id)
+        public async UnaryResult<User> GetUserAsync(int id)
         {
-            User user = new User();
-            Console.WriteLine($"ユーザーID:{id}");
-            user.Name = "山上";
-
-            return user.Name;
+            using var context = new GameDbContext();
+            var user = await context.Users.FindAsync(id);
+            return user;
         }
 
         //全ユーザー情報取得
@@ -66,5 +64,6 @@ namespace realtime_game.Server.Services
             return user.Name;
         }
 
+       
     }
 }

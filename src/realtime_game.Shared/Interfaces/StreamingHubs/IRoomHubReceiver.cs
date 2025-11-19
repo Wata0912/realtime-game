@@ -1,4 +1,5 @@
 ﻿using MagicOnion;
+using System;
 namespace Shared.Interfaces.StreamingHubs
 {
     /// <summary>
@@ -11,5 +12,6 @@ namespace Shared.Interfaces.StreamingHubs
 
         // ユーザーの入室通知
         void OnJoin(JoinedUser user);
+        void OnLeave(Guid connectionId);
     }
 }

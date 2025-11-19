@@ -4,6 +4,7 @@ using MagicOnion;
 using realtime_game.Shared.Interfaces.Services;
 using UnityEngine;
 using Grpc.Core;
+using realtime_game.Server.Models.Entities;
 
 public class UserModels : BaseModel
 {
@@ -26,4 +27,22 @@ public class UserModels : BaseModel
         }
        
     }
+    
+    public async UniTask<User> GetUser(int id)
+    {
+        var channel = GrpcChannelx.ForAddress(ServerURL);
+        var client = MagicOnionClient.Create<IUserService>(channel);
+        try
+        {//ê⁄ë±ê¨å˜
+            var data = await client.GetUserAsync(id);
+            Debug.Log(id);
+            return data;
+        }
+        catch (RpcException e)
+        {//ê⁄ë±é∏îs
+            Debug.Log(e);
+            return null;
+        }
+    }
+   
 }

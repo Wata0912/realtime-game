@@ -7,5 +7,6 @@ namespace Shared.Interfaces.StreamingHubs
     {
         Task<Guid> GetConnectionId();
         Task<JoinedUser[]> JoinAsync(string roomName, int userId);
+        Task LeaveAsync();
     }
 }
