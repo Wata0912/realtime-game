@@ -1,9 +1,11 @@
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using MagicOnion;
 using MagicOnion.Client;
 using Shared.Interfaces.StreamingHubs;
-using UnityEngine;
 using System;
+using System.Threading.Tasks;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class RoomModel : BaseModel, IRoomHubReceiver
@@ -28,6 +30,12 @@ public class RoomModel : BaseModel, IRoomHubReceiver
 
     // 他ユーザー退室通知（GameDirector が購読する）
     public Action<Guid> OnLeftUser { get; set; }
+
+
+    //移動通知
+    // 変更後（3 引数：Quaternion を追加）
+    public Action<Guid, Vector3, Quaternion> OnMoveUser { get; set; }
+
 
     private void Start()
     {
@@ -141,4 +149,22 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         // GameDirector ではこれを受けてキャラ削除が行われる
         OnLeftUser?.Invoke(connectionId);
     }
+
+    // サーバーからの移動通知を受け取る
+    // クライアント → サーバー に位置を送る
+    public async UniTask MoveAsync(Vector3 pos,Quaternion rot )
+    {
+        if (roomHub != null)
+        {
+            await roomHub.MoveAsync(pos,rot);
+        }
+    }
+
+    // サーバー → クライアント から位置通知を受ける
+    public void OnMove(Guid connectionId, Vector3 pos, Quaternion rot)
+    {
+        // 登録されたコールバック(API使用側)を呼ぶ
+        OnMoveUser?.Invoke(connectionId, pos, rot);
+    }
+
 }

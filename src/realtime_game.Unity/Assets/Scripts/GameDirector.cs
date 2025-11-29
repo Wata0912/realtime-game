@@ -1,3 +1,4 @@
+using DG.Tweening;
 using realtime_game.Server.Models.Entities;
 using Shared.Interfaces.StreamingHubs;
 using System;
@@ -21,6 +22,8 @@ public class GameDirector : MonoBehaviour
     int myUserId;                                              // 自分のユーザーID
     User myself;                                               // 自分のユーザーデータ（未使用状態）
 
+   
+
     //========================================
     // 初期化処理
     //========================================
@@ -31,7 +34,9 @@ public class GameDirector : MonoBehaviour
 
         // ルーム内イベントの購読（ユーザー入室 / 退室）
         roomModel.OnJoinedUser += this.OnJoinedUser;
+        roomModel.OnMoveUser += this.OnMoveUser;
         roomModel.OnLeftUser += this.OnLeaveUser;
+        
 
         // MagicOnion サーバーとの接続
         await roomModel.ConnectAsync();
@@ -136,4 +141,22 @@ public class GameDirector : MonoBehaviour
         }
         // 存在しなければ何もしない
     }
+
+    // 自分以外のユーザーの移動を反映
+    // Unity 上の処理
+    // 自分以外のユーザーの移動を反映/
+
+    // 自分以外のユーザーの移動を反映
+    private void OnMoveUser(Guid connectionId, Vector3 pos, Quaternion rot)
+    {
+        if (!characterList.ContainsKey(connectionId)) return;
+
+        var character = characterList[connectionId];
+
+        // DOTween で滑らかに移動
+        character.transform.DOKill(); // 既存 Tween を破棄
+        character.transform.DOMove(pos, 0.1f).SetEase(Ease.Linear).SetUpdate(UpdateType.Normal, true);
+        character.transform.DORotateQuaternion(rot, 0.1f);
+    }
+
 }

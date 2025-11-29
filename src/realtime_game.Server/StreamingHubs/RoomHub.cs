@@ -3,7 +3,10 @@ using realtime_game.Server.Models.Contexts;
 using realtime_game.Server.Models.Entities;
 using realtime_game.Server.StreamingHubs;
 using Shared.Interfaces.StreamingHubs;
+using System.Numerics;
+using UnityEngine;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
+using Quaternion = UnityEngine.Quaternion;
 
 namespace realtime_game.Server.StreamingHubs
 {
@@ -142,5 +145,17 @@ namespace realtime_game.Server.StreamingHubs
 
             return Task.CompletedTask;
         }
+
+        public Task MoveAsync(UnityEngine.Vector3 pos, Quaternion rot)
+        {
+            // 位置情報を記録
+            this.roomContext.RoomUserDataList[this.ConnectionId].pos = pos;
+
+            this.roomContext.Group.Except(new[] { this.ConnectionId }).OnMove(this.ConnectionId, pos,rot);
+
+            return Task.CompletedTask;
+
+        }
+
     }
 }

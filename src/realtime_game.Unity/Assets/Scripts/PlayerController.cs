@@ -1,32 +1,38 @@
+using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public static bool Tojoin = false;
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
 
-   
     public float moveSpeed = 5f;
+    public static bool Tojoin = false; // 入室中フラグ
+    public RoomModel roomModel;          // RoomModel を Inspector でアタッチ
+
+    private Vector3 lastSentPos;
+    private float sendInterval = 0.05f; // 座標送信間隔
+    private float timer = 0f;
 
     void Update()
     {
-        if(!Tojoin)
-        {
-            return;
-        }
-        // WASDキーの入力を取得
-        float horizontal = Input.GetAxis("Horizontal"); // A/D
-        float vertical = Input.GetAxis("Vertical");     // W/S
+        if (!Tojoin || roomModel == null) return;
 
-        // 移動方向を計算
+        // 入力を取得
+        float horizontal = Input.GetAxis("Horizontal");
+        float vertical = Input.GetAxis("Vertical");
         Vector3 direction = new Vector3(horizontal, 0, vertical);
-
-        // 移動を適用
         transform.position += direction * moveSpeed * Time.deltaTime;
-    }
 
+        // 移動情報送信
+        timer += Time.deltaTime;
+        if ((transform.position - lastSentPos).sqrMagnitude > 0.001f && timer >= sendInterval)
+        {
+            lastSentPos = transform.position;
+            timer = 0f;
+            roomModel.MoveAsync(transform.position,transform.rotation).Forget();
+        }
+    }
 }
+
+
+    
