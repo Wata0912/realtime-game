@@ -1,102 +1,37 @@
 using UnityEngine;
 
-[RequireComponent(typeof(Rigidbody))]
 public class PlayerTop : MonoBehaviour
 {
-    public float launchForceMultiplier = 10f;
-    public float launchTorqueMultiplier = 200f;
-    public float spinDecayRate = 1f; // 毎秒どれだけ角速度を減らすか
-    public float collisionSpinTransfer = 0.3f; // 衝突時に相手へ渡す角速度割合
-    public float health = 100f; // ゲーム的HP（任意）
+    [Header("回転速度")]
+    public float spinSpeed = 720f; // 1秒間で何度回るか
 
-    Rigidbody rb;
+    [Header("回転減衰（0 = 減衰なし）")]
+    public float spinDamping = 0f;
 
-    // input support
-    private Vector3 dragStart;
-    private bool dragging = false;
+    private float currentSpinSpeed;
 
-    void Awake()
+    void Start()
     {
-        rb = GetComponent<Rigidbody>();
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        // Y軸回りのみ回す設計なら他の軸を固定（簡易）
+        currentSpinSpeed = spinSpeed;
     }
 
     void Update()
     {
-        // simple spin decay:
-        rb.angularVelocity *= Mathf.Clamp01(1f - spinDecayRate * Time.deltaTime);
+        // Y軸回転（ベイブレードの回転軸）
+        transform.Rotate(0, currentSpinSpeed * Time.deltaTime, 0, Space.Self);
 
-        // Input: mouse/touch drag to launch (single-player/local)
-        if (Input.GetMouseButtonDown(0))
+        // 回転の減衰
+        if (spinDamping > 0f)
         {
-            Ray r = Camera.main.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(r, out RaycastHit hit))
-            {
-                if (hit.collider != null && hit.collider.gameObject == gameObject)
-                {
-                    dragging = true;
-                    dragStart = Input.mousePosition;
-                }
-            }
-        }
-
-        if (dragging && Input.GetMouseButtonUp(0))
-        {
-            Vector3 dragEnd = Input.mousePosition;
-            Vector3 drag = dragEnd - dragStart;
-            LaunchFromDrag(drag);
-            dragging = false;
+            currentSpinSpeed = Mathf.Max(0, currentSpinSpeed - spinDamping * Time.deltaTime);
         }
     }
 
-    void LaunchFromDrag(Vector3 drag)
+    /// <summary>
+    /// 回転速度を変更したい時に呼ぶ
+    /// </summary>
+    public void SetSpinSpeed(float speed)
     {
-        // direction on XZ plane
-        Vector3 camForward = Camera.main.transform.forward;
-        Vector3 right = Camera.main.transform.right;
-        Vector3 dir = (right * drag.x + Vector3.Cross(right, camForward) * drag.y).normalized; // crude mapping
-        dir.y = 0;
-        if (dir == Vector3.zero) dir = transform.forward;
-
-        // power (clamp)
-        float power = Mathf.Clamp(drag.magnitude / 100f, 0.2f, 2f);
-
-        // add forward impulse and angular velocity
-        rb.AddForce(dir * (power * launchForceMultiplier), ForceMode.Impulse);
-        rb.AddTorque(Vector3.up * (power * launchTorqueMultiplier), ForceMode.Impulse);
-    }
-
-    void OnCollisionEnter(Collision other)
-    {
-        // if collide with another 'PlayerTop', transfer some spin and apply impulse
-        PlayerTop otherTop = other.collider.GetComponent<PlayerTop>();
-        if (otherTop != null)
-        {
-            // transfer a bit of spin
-            Vector3 myAngular = rb.angularVelocity;
-            Vector3 impart = myAngular * collisionSpinTransfer;
-            otherTop.rb.AddTorque(impart, ForceMode.VelocityChange);
-            // reduce own angular velocity proportional
-            rb.angularVelocity = myAngular * (1f - collisionSpinTransfer);
-
-            // simple damage model: reduce health based on relative velocity
-            float impact = other.relativeVelocity.magnitude;
-            health -= impact * 5f;
-            otherTop.health -= impact * 5f;
-
-            // add reactive force (knockback)
-            Vector3 impulse = other.relativeVelocity.normalized * impact * 0.5f;
-            rb.AddForce(-impulse, ForceMode.Impulse);
-            otherTop.rb.AddForce(impulse, ForceMode.Impulse);
-
-            // TODO: play sound/particles here
-        }
-    }
-
-    public bool IsKnockedOut()
-    {
-        // knocked out when health low or spin below threshold
-        return health <= 0f || rb.angularVelocity.magnitude < 0.5f;
+        currentSpinSpeed = speed;
     }
 }

@@ -58,6 +58,7 @@ public class StageManager : MonoBehaviour
     // ------------------------------------------------------
     void Update()
     {
+      /*
         for (int i = activeTops.Count - 1; i >= 0; i--)
         {
             var top = activeTops[i];
@@ -79,6 +80,6 @@ public class StageManager : MonoBehaviour
         if (activeTops.Count <= 1)
         {
             Invoke(nameof(SpawnAll), respawnDelay);
-        }
+        }*/
     }
 }
