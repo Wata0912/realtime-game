@@ -29,7 +29,7 @@ public class PlayerController : MonoBehaviour
         {
             lastSentPos = transform.position;
             timer = 0f;
-            roomModel.MoveAsync(transform.position,transform.rotation).Forget();
+            //roomModel.MoveAsync(transform.position,transform.rotation).Forget();
         }
     }
 }

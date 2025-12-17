@@ -1,170 +1,162 @@
-using Cysharp.Threading.Tasks;
-using DG.Tweening;
+ï»¿using Cysharp.Threading.Tasks;
 using MagicOnion;
 using MagicOnion.Client;
 using Shared.Interfaces.StreamingHubs;
 using System;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class RoomModel : BaseModel, IRoomHubReceiver
 {
-    private GrpcChannelx channel;     // MagicOnion ‚Ì gRPC ’ÊMƒ`ƒƒƒlƒ‹
-    private IRoomHub roomHub;         // StreamingHub ƒNƒ‰ƒCƒAƒ“ƒgiƒT[ƒo[‚Æ‘o•ûŒü’ÊMj
+    private GrpcChannelx channel;
+    private IRoomHub roomHub;
+    [SerializeField] Button LeaveButton;    // é€€å®¤ãƒœã‚¿ãƒ³
+    [SerializeField] Button JoinButton;     // å…¥å®¤ãƒœã‚¿ãƒ³
+    [SerializeField] GameObject Userprefub; //ãƒ¦ãƒ¼ã‚¶ãƒ¼æƒ…å ±æ‰€æŒã®ç©ºã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆ
+    RoomUser roomUser;                      //ãƒ¦ãƒ¼ã‚¶ãƒ¼æƒ…å ±æ‰€æŒã‚¹ã‚¯ãƒªãƒ—ãƒˆ
+    bool GameReady  = false;
+    [SerializeField] GameDirector gameDirector;
+    bool isConnected;
 
-    [SerializeField] Button LeaveButton;   // ‘Şºƒ{ƒ^ƒ“
-    [SerializeField] Button JoinButton;    // “üºƒ{ƒ^ƒ“
 
-    //========================================
-    // Ú‘±IDiStreamingHub ‚É‚Â‚È‚ª‚é‚ÆƒT[ƒo[‚ª”­s‚·‚éj
-    //========================================
     public Guid ConnectionId { get; set; }
-
-    //========================================
-    // ƒCƒxƒ“ƒgƒR[ƒ‹ƒoƒbƒN
-    //========================================
-
-    // ‘¼ƒ†[ƒU[“üº’Ê’miGameDirector ‚ªw“Ç‚·‚éj
+    // ä»–ãƒ¦ãƒ¼ã‚¶ãƒ¼å…¥å®¤é€šçŸ¥ï¼ˆGameDirector ãŒè³¼èª­ã™ã‚‹ï¼‰
     public Action<JoinedUser> OnJoinedUser { get; set; }
-
-    // ‘¼ƒ†[ƒU[‘Şº’Ê’miGameDirector ‚ªw“Ç‚·‚éj
+    // ä»–ãƒ¦ãƒ¼ã‚¶ãƒ¼é€€å®¤é€šçŸ¥ï¼ˆGameDirector ãŒè³¼èª­ã™ã‚‹ï¼‰
     public Action<Guid> OnLeftUser { get; set; }
-
-
-    //ˆÚ“®’Ê’m
-    // •ÏXŒãi3 ˆø”FQuaternion ‚ğ’Ç‰Áj
-    public Action<Guid, Vector3, Quaternion> OnMoveUser { get; set; }
-
+    // ãƒ™ã‚¤ç§»å‹•é€šçŸ¥ï¼ˆGameDirector ãŒè³¼èª­ã™ã‚‹ï¼‰
+    public Action<Guid, Vector3, Quaternion, int> OnMoveBay { get; set; }
+    //å…¨ãƒ¦ãƒ¼ã‚¶ãƒ¼æº–å‚™å®Œäº†é€šçŸ¥
+    public Action<bool> OnAllReadyStateChangedEvent;
 
     private void Start()
     {
-        // ‰Šúó‘Ô‚Å‚ÍÚ‘±‚µ‚Ä‚¢‚È‚¢
+        // åˆæœŸçŠ¶æ…‹ã§ã¯æ¥ç¶šã—ã¦ã„ãªã„
         roomHub = null;
     }
 
-    //========================================
-    // MagicOnion ƒT[ƒo[‚ÉÚ‘±
-    //========================================
     public async UniTask ConnectAsync()
     {
-        // ƒT[ƒo[‚ÌƒAƒhƒŒƒX‚ÉÚ‘±
         channel = GrpcChannelx.ForAddress(ServerURL);
 
-        // StreamingHub Ú‘±ithis = IRoomHubReceiver ‚ÌÀ‘•‚Æ‚µ‚ÄƒR[ƒ‹ƒoƒbƒNóæj
-        roomHub = await StreamingHubClient
-            .ConnectAsync<IRoomHub, IRoomHubReceiver>(channel, this);
+        roomHub = await StreamingHubClient.ConnectAsync<IRoomHub, IRoomHubReceiver>(
+            channel, this
+        );
 
-        // Ú‘±IDæ“¾iƒT[ƒo[‘¤‚Å¶¬‚³‚ê‚éj
-        this.ConnectionId = await roomHub.GetConnectionId();
+        ConnectionId = await roomHub.GetConnectionId();
+        isConnected = true;
     }
 
-    //========================================
-    // MagicOnion Ø’fˆ—
-    //========================================
-    public async UniTask DisconnectAsync()
+    public async UniTask JoinAsync(string room, int userId)
     {
-        // Hub ‚Ì Dispose ¨ ƒT[ƒo[‚Ö‚ÌÚ‘±‚ğ‰ğœ
-        if (roomHub != null) await roomHub.DisposeAsync();
 
-        // gRPC ƒ`ƒƒƒlƒ‹‚ğƒVƒƒƒbƒgƒ_ƒEƒ“
-        if (channel != null) await channel.ShutdownAsync();
-
-        roomHub = null;
-        channel = null;
-    }
-
-    //========================================
-    // Unity ƒIƒuƒWƒFƒNƒg”jŠüiƒV[ƒ“Ø‘Ö‚È‚Çj
-    //========================================
-    async void OnDestroy()
-    {
-        if (roomHub != null)
+        if (!isConnected)
         {
-            await DisconnectAsync();
-
-            // ‘Şºƒtƒ‰ƒO‚ğƒNƒŠƒAiPlayerController ‘¤‚Ìó‘ÔŠÇ——pj
-            PlayerController.Tojoin = false;
+            Debug.LogError("æœªæ¥ç¶šã®ãŸã‚ Join ã§ãã¾ã›ã‚“");
+            return;
         }
-    }
 
-    //========================================
-    // “üºˆ—iJoin ƒ{ƒ^ƒ“‚©‚çŒÄ‚Î‚ê‚éj
-    //========================================
-    public async UniTask JoinAsync(string roomName, int userId)
-    {
-        // ƒT[ƒo[‚Ì Join ‚ğŒÄ‚Ño‚µ ¨ ‚·‚Å‚É“üº‚µ‚Ä‚¢‚éƒ†[ƒU[ˆê——‚ª•Ô‚é
-        JoinedUser[] users = await roomHub.JoinAsync(roomName, userId);
-
-        // ó‚¯æ‚Á‚½Šù‘¶ƒ†[ƒU[î•ñ‚ğƒNƒ‰ƒCƒAƒ“ƒg‘¤‚É’Ê’m
-        foreach (var user in users)
+        JoinedUser[] users = await roomHub.JoinAsync(room, userId);
+        foreach (var u in users)
         {
-            OnJoinedUser?.Invoke(user);
+            OnJoinedUser?.Invoke(u);
 
-            Debug.Log($"Ú‘±ID:{ConnectionId} ƒ†[ƒU[ID:{user.UserData.Id} ƒ†[ƒU[ƒl[ƒ€:{user.UserData.Name}");
+            Debug.Log($"æ¥ç¶šID:{ConnectionId} ãƒ¦ãƒ¼ã‚¶ãƒ¼ID:{u.UserData.Id} ãƒ¦ãƒ¼ã‚¶ãƒ¼ãƒãƒ¼ãƒ :{u.UserData.Name}");
 
-            // ©•ª‚ª“üº’†‚Å‚ ‚é‚±‚Æ‚ğ‹L˜^
-            PlayerController.Tojoin = true;
-
-            // UI ‚Ìó‘ÔXV
+            // UI ã®çŠ¶æ…‹æ›´æ–°
             JoinButton.interactable = false;
             LeaveButton.interactable = true;
         }
     }
 
+    //========================================s
+    // MagicOnion åˆ‡æ–­å‡¦ç†
     //========================================
-    // ‘¼ƒ†[ƒU[“üº’Ê’miƒT[ƒo[ ¨ ƒNƒ‰ƒCƒAƒ“ƒgj
-    //========================================
-    public void OnJoin(JoinedUser user)
+    public async UniTask DisconnectAsync()
     {
-        // “o˜^‚³‚ê‚Ä‚¢‚éƒR[ƒ‹ƒoƒbƒN‚ª‚ ‚ê‚ÎŒÄ‚Ô
-        OnJoinedUser?.Invoke(user);
+        // Hub ã® Dispose â†’ ã‚µãƒ¼ãƒãƒ¼ã¸ã®æ¥ç¶šã‚’è§£é™¤
+        if (roomHub != null) await roomHub.DisposeAsync();
+
+        // gRPC ãƒãƒ£ãƒãƒ«ã‚’ã‚·ãƒ£ãƒƒãƒˆãƒ€ã‚¦ãƒ³
+        if (channel != null) await channel.ShutdownAsync();
+
+        roomHub = null;
+        channel = null;
+    }
+    //========================================s
+    // æº–å‚™å®Œäº†é€ä¿¡
+    //========================================
+    public async void OnReadyButtonClicked()
+    {
+        Debug.Log("[Unity] Ready button clicked");
+        await roomHub.SetMyReadyAsync(true);
     }
 
+    public void OnReadyStateChanged(Guid connectionId, bool isReady)
+    {
+        // â‘  å„ãƒ¦ãƒ¼ã‚¶ãƒ¼ã® Ready çŠ¶æ…‹æ›´æ–°
+        gameDirector.OnUserReadyChanged(connectionId, isReady);
+
+        // â‘¡ è‡ªåˆ†è‡ªèº«ã® Ready çŠ¶æ…‹
+        if (connectionId == ConnectionId)
+        {
+            GameReady = isReady;
+        }
+    }
+    //========================================s
+    // ãƒ«ãƒ¼ãƒ ã®ãƒ¦ãƒ¼ã‚¶ãƒ¼å…¨å“¡ã®æº–å‚™å®Œäº†
     //========================================
-    // ©•ª‚ªƒ‹[ƒ€‚©‚ç‘Şº‚·‚éiLeave ƒ{ƒ^ƒ“‚©‚çŒÄ‚Î‚ê‚éj
+    public void OnAllReadyStateChanged(bool allReady)
+    {
+
+        Debug.Log($"[RoomModel] AllReady received = {allReady}");
+        OnAllReadyStateChangedEvent?.Invoke(allReady);
+
+    }
+
+    //========================================s
+    // é€€å‡º
     //========================================
     public async UniTask LeaveAsync()
     {
+       
         if (roomHub != null)
         {
-            // ƒT[ƒo[‚É‘Şº‚ğ’Ê’miRoomHub.LeaveAsync ‚ªŒÄ‚Î‚ê‚éj
+            // ã‚µãƒ¼ãƒãƒ¼ã«é€€å®¤ã‚’é€šçŸ¥ï¼ˆRoomHub.LeaveAsync ãŒå‘¼ã°ã‚Œã‚‹ï¼‰
             await roomHub.LeaveAsync();
 
-            // ©•ª‚Í‚à‚¤ƒ‹[ƒ€‚É“ü‚Á‚Ä‚¢‚È‚¢
+            // è‡ªåˆ†ã¯ã‚‚ã†ãƒ«ãƒ¼ãƒ ã«å…¥ã£ã¦ã„ãªã„
             PlayerController.Tojoin = false;
 
-            // ƒ{ƒ^ƒ“ó‘Ô‚ğØ‚è‘Ö‚¦
+            // ãƒœã‚¿ãƒ³çŠ¶æ…‹ã‚’åˆ‡ã‚Šæ›¿ãˆ
             JoinButton.interactable = true;
             LeaveButton.interactable = false;
         }
     }
 
     //========================================
-    // ‘¼ƒ†[ƒU[‚ª‘Şº‚µ‚½‚Æ‚«‚Ì’Ê’miƒT[ƒo[ ¨ ƒNƒ‰ƒCƒAƒ“ƒgj
+    // è‡ªåˆ†ã®ãƒ™ã‚¤ã®ç§»å‹•é€ä¿¡
     //========================================
-    public void OnLeave(Guid connectionId)
-    {
-        // “o˜^‚³‚ê‚Ä‚¢‚éˆ—‚ğŒÄ‚Ô
-        // GameDirector ‚Å‚Í‚±‚ê‚ğó‚¯‚ÄƒLƒƒƒ‰íœ‚ªs‚í‚ê‚é
-        OnLeftUser?.Invoke(connectionId);
-    }
-
-    // ƒT[ƒo[‚©‚ç‚ÌˆÚ“®’Ê’m‚ğó‚¯æ‚é
-    // ƒNƒ‰ƒCƒAƒ“ƒg ¨ ƒT[ƒo[ ‚ÉˆÊ’u‚ğ‘—‚é
-    public async UniTask MoveAsync(Vector3 pos,Quaternion rot )
+    public async UniTask MoveAsync(Vector3 pos, Quaternion rot, int seq)
     {
         if (roomHub != null)
-        {
-            await roomHub.MoveAsync(pos,rot);
-        }
+            await roomHub.MoveAsync(pos, rot, seq);
     }
 
-    // ƒT[ƒo[ ¨ ƒNƒ‰ƒCƒAƒ“ƒg ‚©‚çˆÊ’u’Ê’m‚ğó‚¯‚é
-    public void OnMove(Guid connectionId, Vector3 pos, Quaternion rot)
-    {
-        // “o˜^‚³‚ê‚½ƒR[ƒ‹ƒoƒbƒN(APIg—p‘¤)‚ğŒÄ‚Ô
-        OnMoveUser?.Invoke(connectionId, pos, rot);
-    }
+    // === StreamingHub ã‚³ãƒ¼ãƒ«ãƒãƒƒã‚¯ ===
+
+    //========================================
+    // ä»–ãƒ¦ãƒ¼ã‚¶ãƒ¼å…¥å®¤é€šçŸ¥ï¼ˆã‚µãƒ¼ãƒãƒ¼ â†’ ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆï¼‰
+    //========================================
+    public void OnJoin(JoinedUser user) => OnJoinedUser?.Invoke(user);
+
+    //========================================
+    // ä»–ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒé€€å®¤ã—ãŸã¨ãã®é€šçŸ¥ï¼ˆã‚µãƒ¼ãƒãƒ¼ â†’ ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆï¼‰
+    //========================================
+    public void OnLeave(Guid id) => OnLeftUser?.Invoke(id);
+    //========================================
+    // è‡ªèº«ã®ç§»å‹•ä»¥å¤–ã§ãƒ™ã‚¤ãŒå‹•ã„ãŸã¨ãã®é€šçŸ¥
+    //========================================
+    public void OnMove(Guid id, Vector3 pos, Quaternion rot, int seq) => OnMoveBay?.Invoke(id, pos, rot,seq);
 
 }

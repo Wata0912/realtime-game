@@ -7,6 +7,7 @@ using System.Numerics;
 using UnityEngine;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using Quaternion = UnityEngine.Quaternion;
+using Vector3 = UnityEngine.Vector3;
 
 namespace realtime_game.Server.StreamingHubs
 {
@@ -19,6 +20,10 @@ namespace realtime_game.Server.StreamingHubs
 
         // 現在の接続が属しているルームの情報（部屋名・ユーザーリストなど）
         private RoomContext roomContext;
+
+      
+
+
 
         // ---------------------------------------------------------
         // ルームに入室（接続）する
@@ -61,9 +66,14 @@ namespace realtime_game.Server.StreamingHubs
             // 自分以外のメンバーに「誰か入ってきたよ」と通知
             this.roomContext.Group.Except([this.ConnectionId]).OnJoin(joinedUser);
 
+
             // ログ出力
             Console.WriteLine($"[JOIN] User '{user.Name}' (ID={user.Id}) joined room '{roomName}'.");
             Console.WriteLine($"[ROOM STATUS] {roomName}: {this.roomContext.RoomUserDataList.Count} users now connected.");
+
+            // RoomContext 生成直後 or 取得直後
+            this.roomContext.OnAllReadyStateChanged += OnAllReadyStateChanged;
+
 
             // 入室したユーザーに全参加者一覧を返す
             return this.roomContext.RoomUserDataList
@@ -117,6 +127,7 @@ namespace realtime_game.Server.StreamingHubs
                 return Task.CompletedTask;
             }
 
+
             // 全体に「退室したよ」と通知
             this.roomContext.Group.All.OnLeave(this.ConnectionId);
 
@@ -133,7 +144,7 @@ namespace realtime_game.Server.StreamingHubs
             }
 
             // ルーム内ユーザー一覧から削除
-            this.roomContext.RoomUserDataList.Remove(this.ConnectionId);
+            roomContext.RemoveUser(this.ConnectionId);
 
             // もし誰もいなくなったらルームごと削除
             if (this.roomContext.RoomUserDataList.Count == 0)
@@ -146,16 +157,54 @@ namespace realtime_game.Server.StreamingHubs
             return Task.CompletedTask;
         }
 
-        public Task MoveAsync(UnityEngine.Vector3 pos, Quaternion rot)
+        // ---------------------------------------------------------
+        // 準備完了受信
+        // ---------------------------------------------------------
+        public async Task SetMyReadyAsync(bool isReady)
         {
-            // 位置情報を記録
+            if (roomContext == null) return;
+
+            // MagicOnion の接続ID
+            Guid connectionId = Context.ContextId;
+
+            Console.WriteLine(
+            $"[SetMyReadyAsync] ConnectionId={connectionId}, isReady={isReady}"
+   );
+            // Ready状態の変更は RoomContext に任せる
+            roomContext.UpdateReadyState(connectionId, isReady);
+
+            await Task.CompletedTask;
+        }
+
+
+        private void OnAllReadyStateChanged(bool allReady)
+        {
+            if (roomContext == null) return;
+
+            // ルーム全体にブロードキャスト
+            roomContext.Group.All.OnAllReadyStateChanged(allReady);
+        }
+
+
+
+
+        public Task MoveAsync(UnityEngine.Vector3 pos, Quaternion rot, int seq)
+        {
+            if (roomContext == null)
+                return Task.CompletedTask;
+
+            // 必要なら記録（任意）
             this.roomContext.RoomUserDataList[this.ConnectionId].pos = pos;
 
-            this.roomContext.Group.Except(new[] { this.ConnectionId }).OnMove(this.ConnectionId, pos,rot);
+            // ★ seq を必ず中継する
+            this.roomContext.Group
+                .Except(new[] { this.ConnectionId })
+                .OnMove(this.ConnectionId, pos, rot, seq);
 
             return Task.CompletedTask;
-
         }
+
+       
 
     }
 }

@@ -1,5 +1,4 @@
-using DG.Tweening;
-using realtime_game.Server.Models.Entities;
+using Cysharp.Threading.Tasks;
 using Shared.Interfaces.StreamingHubs;
 using System;
 using System.Collections.Generic;
@@ -8,76 +7,76 @@ using UnityEngine.UI;
 
 public class GameDirector : MonoBehaviour
 {
-    [SerializeField] GameObject characterPrefab;                // ¶¬‚·‚éƒLƒƒƒ‰ƒNƒ^[‚ÌƒvƒŒƒnƒu
-    Dictionary<Guid, GameObject> characterList = new Dictionary<Guid, GameObject>(); // Ú‘±ID‚ÆƒLƒƒƒ‰ƒIƒuƒWƒFƒNƒg‚Ì‘Î‰•\
+    [SerializeField] GameObject Userprefub;
+    RoomUser roomUser;
+    [SerializeField] InputField RoomID;
+    [SerializeField] InputField UserID;
 
-    [SerializeField] InputField RoomID;                        // “üº‚·‚éƒ‹[ƒ€ID“ü—Í—“
-    [SerializeField] InputField UserID;                        // ©•ª‚Ìƒ†[ƒU[ID“ü—Í—“
+    [SerializeField] GameObject Bayprefub;
 
-    private bool OnAdmissionStatus = false;                    // –¢g—pi“üºó‘Ôƒtƒ‰ƒOHj
+    RoomModel roomModel;
+    PlayerTop myPlayer;
+    [SerializeField] public Transform stageCenter;
 
-    RoomModel roomModel;                                       // ƒ‹[ƒ€’ÊMƒ‚ƒfƒ‹
-    UserModels userModels;                                     // ƒ†[ƒU[ŠÇ—ƒ‚ƒfƒ‹
+    int myUserId;
+    Dictionary<Guid, RoomUser> players = new Dictionary<Guid, RoomUser>();
 
-    int myUserId;                                              // ©•ª‚Ìƒ†[ƒU[ID
-    User myself;                                               // ©•ª‚Ìƒ†[ƒU[ƒf[ƒ^i–¢g—pó‘Ôj
-
-   
-
-    //========================================
-    // ‰Šú‰»ˆ—
-    //========================================
-    async void Start()
+    void Start()
     {
         roomModel = GetComponent<RoomModel>();
-        userModels = GetComponent<UserModels>();
 
-        // ƒ‹[ƒ€“àƒCƒxƒ“ƒg‚Ìw“Çiƒ†[ƒU[“üº / ‘Şºj
-        roomModel.OnJoinedUser += this.OnJoinedUser;
-        roomModel.OnMoveUser += this.OnMoveUser;
-        roomModel.OnLeftUser += this.OnLeaveUser;
-        
+        roomModel.OnJoinedUser += OnJoinedUser;
+        roomModel.OnMoveBay += OnMoveUser;
+        roomModel.OnLeftUser += OnLeaveUser;
 
-        // MagicOnion ƒT[ƒo[‚Æ‚ÌÚ‘±
-        await roomModel.ConnectAsync();
-        try
-        {
-            // –{—ˆ‚Í‚±‚±‚Åƒ†[ƒU[ƒf[ƒ^æ“¾‚È‚Ç‚ğs‚¤
-            // myself = await userModels.GetUser(myUserId);
-        }
-        catch (Exception e)
-        {
-            Debug.Log("RegistUser failed");
-            Debug.LogException(e);
-        }
+        roomModel.ConnectAsync().Forget();
+        roomModel.OnAllReadyStateChangedEvent += OnAllReadyStateChanged;
+
+
     }
 
-    //========================================
-    // “üºˆ—
-    //========================================
+    // =========================================================
+    // å…¥å®¤å‡¦ç†
+    // =========================================================
     public async void JoinRoom()
     {
-        // “ü—Íƒ`ƒFƒbƒNF‹ó•¶š‚È‚ç“üº‚µ‚È‚¢
+        // å…¥åŠ›ãƒã‚§ãƒƒã‚¯ï¼šç©ºæ–‡å­—ãªã‚‰å…¥å®¤ã—ãªã„
         if (string.IsNullOrEmpty(RoomID.text)) return;
         if (string.IsNullOrEmpty(UserID.text)) return;
 
-        // ƒ†[ƒU[ID•¶š—ñ ¨ int ‚É•ÏŠ·
-        if (!int.TryParse(UserID.text, out int userid))
-        {
-            Debug.Log("”š‚Å‚Í‚ ‚è‚Ü‚¹‚ñ");
-            return;
-        }
+        if (!int.TryParse(UserID.text, out myUserId)) return;
 
-        Debug.Log("•ÏŠ·¬Œ÷: " + userid);
-        myUserId = userid;
-
-        // ƒ‹[ƒ€‚É“üº
         await roomModel.JoinAsync(RoomID.text, myUserId);
-        Debug.Log(RoomID.text);
+        // ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ç”Ÿæˆ
+
+
+    }
+
+    // =========================================================
+    // ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒå…¥å®¤ã—ã¦ããŸ
+    // =========================================================
+    private void OnJoinedUser(JoinedUser user)
+    {
+        // ã™ã§ã«è¡¨ç¤ºã•ã‚Œã¦ã„ã‚‹ãƒ¦ãƒ¼ã‚¶ãƒ¼ãªã‚‰ä½•ã‚‚ã—ãªã„ï¼ˆé‡è¤‡ç”Ÿæˆé˜²æ­¢ï¼‰
+        if (players.ContainsKey(user.ConnectionId))
+            return;
+
+
+        // ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ç”Ÿæˆ
+        GameObject User = Instantiate(Userprefub);
+        var userModel = User.AddComponent<RoomUser>();
+
+        userModel.userId = user.UserData.Id;
+        userModel.userName = user.UserData.Name;
+
+
+        Debug.Log($"Joinâ†’{userModel.userId}:{userModel.userName}");
+        // æ¥ç¶šIDã‚’ã‚­ãƒ¼ã¨ã—ã¦ä¿æŒ
+        players[user.ConnectionId] = userModel;
     }
 
     //========================================
-    // ‘Şºˆ—
+    // é€€å®¤å‡¦ç†
     //========================================
     public async void LeaveRoom()
     {
@@ -85,18 +84,18 @@ public class GameDirector : MonoBehaviour
         {
             try
             {
-                // ƒT[ƒo[‚Ö‘Şº’Ê’m
+                // ã‚µãƒ¼ãƒãƒ¼ã¸é€€å®¤é€šçŸ¥
                 await roomModel.LeaveAsync();
-                Debug.Log("ƒ‹[ƒ€‘ŞºŠ®—¹");
+                Debug.Log("ãƒ«ãƒ¼ãƒ é€€å®¤å®Œäº†");
 
-                // ‘SƒLƒƒƒ‰ƒNƒ^[‚ğíœi©•ªˆÈŠOj
-                foreach (var obj in characterList.Values)
+                // å…¨ã‚­ãƒ£ãƒ©ã‚¯ã‚¿ãƒ¼ã‚’å‰Šé™¤ï¼ˆè‡ªåˆ†ä»¥å¤–ï¼‰
+                foreach (var obj in players.Values)
                 {
                     Destroy(obj);
                 }
 
-                // ƒ[ƒJƒ‹‚Ìˆê——‚àƒNƒŠƒA
-                characterList.Clear();
+                // ãƒ­ãƒ¼ã‚«ãƒ«ã®ä¸€è¦§ã‚‚ã‚¯ãƒªã‚¢
+                players.Clear();
             }
             catch (Exception e)
             {
@@ -105,58 +104,103 @@ public class GameDirector : MonoBehaviour
         }
     }
 
-    //========================================
-    // ‚Ù‚©‚Ìƒ†[ƒU[‚ª“üº‚µ‚Ä‚«‚½‚Ìˆ—
-    //========================================
-    private void OnJoinedUser(JoinedUser user)
-    {
-        // ‚·‚Å‚É•\¦‚³‚ê‚Ä‚¢‚éƒ†[ƒU[‚È‚ç‰½‚à‚µ‚È‚¢id•¡¶¬–h~j
-        if (characterList.ContainsKey(user.ConnectionId))
-            return;
-
-        // ©•ª©g‚È‚çƒLƒƒƒ‰¶¬‚µ‚È‚¢
-        if (user.UserData.Id == myUserId)
-            return;
-
-        // ƒLƒƒƒ‰ƒNƒ^[¶¬
-        GameObject characterObject = Instantiate(characterPrefab);
-        characterObject.transform.position = new Vector3(0, 0, 0);
-
-        // Ú‘±ID‚ğƒL[‚Æ‚µ‚Ä•Û
-        characterList[user.ConnectionId] = characterObject;
-    }
 
     //========================================
-    // ‚Ù‚©‚Ìƒ†[ƒU[‚ª‘Şº‚µ‚½‚Ìˆ—
+    //ã»ã‹ã®ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒé€€å‡ºã—ãŸ
     //========================================
     private void OnLeaveUser(Guid connectionId)
     {
-        // ŠY“–ƒ†[ƒU[‚ªˆê——‚É‘¶İ‚·‚ê‚Îíœ
-        if (characterList.TryGetValue(connectionId, out var obj))
+
+        // è©²å½“ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒä¸€è¦§ã«å­˜åœ¨ã™ã‚Œã°å‰Šé™¤
+        if (players.TryGetValue(connectionId, out var obj))
         {
-            Destroy(obj);                 // ‰æ–Ê‚©‚çíœ
-            characterList.Remove(connectionId);  // ŠÇ—ƒŠƒXƒg‚©‚çíœ
+            Destroy(obj);                 // ç”»é¢ã‹ã‚‰å‰Šé™¤
+            players.Remove(connectionId);  // ç®¡ç†ãƒªã‚¹ãƒˆã‹ã‚‰å‰Šé™¤
 
-            Debug.Log($"ƒ†[ƒU[‘Şº: {connectionId}");
+            Debug.Log($"ãƒ¦ãƒ¼ã‚¶ãƒ¼é€€å®¤â†’{players[connectionId].userId}:{players[connectionId].userName}");
         }
-        // ‘¶İ‚µ‚È‚¯‚ê‚Î‰½‚à‚µ‚È‚¢
+        // å­˜åœ¨ã—ãªã‘ã‚Œã°ä½•ã‚‚ã—ãªã„
     }
+    
+  
 
-    // ©•ªˆÈŠO‚Ìƒ†[ƒU[‚ÌˆÚ“®‚ğ”½‰f
-    // Unity ã‚Ìˆ—
-    // ©•ªˆÈŠO‚Ìƒ†[ƒU[‚ÌˆÚ“®‚ğ”½‰f/
-
-    // ©•ªˆÈŠO‚Ìƒ†[ƒU[‚ÌˆÚ“®‚ğ”½‰f
-    private void OnMoveUser(Guid connectionId, Vector3 pos, Quaternion rot)
+    // RoomModel ã‹ã‚‰å‘¼ã°ã‚Œã‚‹å…¥å£
+    public void OnUserReadyChanged(Guid connectionId, bool isReady)
     {
-        if (!characterList.ContainsKey(connectionId)) return;
+        if (!players.TryGetValue(connectionId, out var player))
+            return;
 
-        var character = characterList[connectionId];
-
-        // DOTween ‚ÅŠŠ‚ç‚©‚ÉˆÚ“®
-        character.transform.DOKill(); // Šù‘¶ Tween ‚ğ”jŠü
-        character.transform.DOMove(pos, 0.1f).SetEase(Ease.Linear).SetUpdate(UpdateType.Normal, true);
-        character.transform.DORotateQuaternion(rot, 0.1f);
+        //player.SetReady(isReady);
     }
 
+    //========================================
+    //ãƒªãƒ¢ãƒ¼ãƒˆãƒ™ã‚¤ã®ä½ç½®åŒæœŸ
+    //========================================
+    private void OnMoveUser(Guid id, Vector3 pos, Quaternion rot, int seq)
+    {
+        if (players.TryGetValue(id, out var user))
+        {
+            if (user.bay != null)
+            {
+                user.bay.SetRemoteState(pos, rot,seq);
+            }
+        }        
+    }
+
+    //========================================
+    //ã‚²ãƒ¼ãƒ ã®é–‹å§‹æº–å‚™ãŒã§ããŸ
+    //========================================
+    public void OnAllReadyStateChanged(bool allReady)
+    {
+        Debug.Log($"[GameDirector] AllReady = {allReady}");
+
+        if (!allReady)
+            return;
+
+        OnAllPlayerReady();
+    }
+
+    //========================================
+    //ã‚²ãƒ¼ãƒ é–‹å§‹å‡¦ç†
+    //========================================
+    public void OnAllPlayerReady()
+    {
+        Debug.Log("[GameDirector] å…¨å“¡Ready â†’ ã‚²ãƒ¼ãƒ é–‹å§‹");
+
+        // ãƒ•ã‚§ãƒ¼ã‚ºé·ç§»ãƒ»ã‚«ã‚¦ãƒ³ãƒˆãƒ€ã‚¦ãƒ³ãƒ»æ“ä½œè§£æ”¾ãªã©
+        SpawnBays();
+    }
+
+    //========================================
+    //ãƒ™ã‚¤ã®ç”Ÿæˆ
+    //========================================
+    public void SpawnBays()
+    {
+        foreach (var pair in players)
+        {
+            RoomUser user = pair.Value;
+
+            // ã™ã§ã«ãƒ™ã‚¤ãŒã‚ã‚‹ãªã‚‰ä½œã‚‰ãªã„
+            if (user.bay != null) continue;
+
+            Vector3 spawnPos = new Vector3(
+            UnityEngine.Random.Range(-3f, 3f),
+            0f,
+            UnityEngine.Random.Range(-3f, 3f)
+            );
+
+            GameObject bayObj = Instantiate(Bayprefub, spawnPos, Quaternion.identity);
+            PlayerTop bay = bayObj.GetComponent<PlayerTop>();
+            bay.stageCenter = stageCenter;
+
+            // ãƒ­ãƒ¼ã‚«ãƒ« / ãƒªãƒ¢ãƒ¼ãƒˆåˆ¤å®š
+            bay.Initialize(user.userId, user.userId == myUserId);
+
+            // RoomModel ã‚’æ¸¡ã™ï¼ˆåŒæœŸç”¨ï¼‰
+            bay.roomModel = roomModel;
+
+            // RoomUser ã«ç´ã¥ã‘ã‚‹
+            user.bay = bay;
+        }
+    }
 }

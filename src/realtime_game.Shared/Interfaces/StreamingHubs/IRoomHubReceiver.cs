@@ -21,7 +21,11 @@ namespace Shared.Interfaces.StreamingHubs
         //ユーザーの退出通知
         void OnLeave(Guid connectionId);
 
+        public void OnReadyStateChanged(Guid connectionId, bool isReady);
+
+        void OnAllReadyStateChanged(bool allReady);
+
         //ユーザーの位置通知
-        void OnMove(Guid connectionId, Vector3 pos,Quaternion quaternion);
+        void OnMove(Guid connectionId, Vector3 pos, Quaternion quaternion, int seq);
     }
 }

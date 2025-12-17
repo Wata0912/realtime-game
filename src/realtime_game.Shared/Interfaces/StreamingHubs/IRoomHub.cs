@@ -17,7 +17,10 @@ namespace Shared.Interfaces.StreamingHubs
         //退出
         Task LeaveAsync();
 
+        //準備完了
+        Task SetMyReadyAsync(bool isReady);
+
         //位置同期
-        Task MoveAsync(Vector3 pos, Quaternion quaternion);
+        Task MoveAsync(Vector3 pos, Quaternion quaternion, int seq);
     }
 }

@@ -3,83 +3,131 @@ using System.Collections.Generic;
 
 public class StageManager : MonoBehaviour
 {
-    [Header("Spawn Settings")]
-    public GameObject topPrefab;              // ← ベイのPrefabをInspectorから指定
-    public Transform[] spawnPoints;           // ← スポーン位置
+    [Header("ベイプレハブ（複数登録可）")]
+    public GameObject[] bayPrefabs;
 
-    [Header("Match Settings")]
-    public float respawnDelay = 2f;
+    [Header("生成設定")]
+    public int spawnCount = 4;
+    public float spawnRadius = 3f;
+    public Transform stageCenter;
 
-    private List<PlayerTop> activeTops = new List<PlayerTop>();
+    [Header("スタジアム範囲")]
+    public float stadiumMinY = -2f;
 
-    void Start()
+    private List<PlayerTop> aliveBays = new List<PlayerTop>();
+
+    private bool gameStarted = false;   // ← ★追加：ゲーム開始フラグ
+    private bool gameEnded = false;
+
+    void OnDestroy()
     {
-        SpawnAll();
+        //PlayerTop.OnAnyBayDead -= OnBayDead;
     }
 
-    // ------------------------------------------------------
-    // すべてのベイをPrefabから生成
-    // ------------------------------------------------------
-    public void SpawnAll()
-    {
-        ClearExisting();
-
-        foreach (Transform sp in spawnPoints)
-        {
-            GameObject t = Instantiate(topPrefab, sp.position, sp.rotation);
-            PlayerTop top = t.GetComponent<PlayerTop>();
-
-            if (top != null)
-            {
-                activeTops.Add(top);
-            }
-            else
-            {
-                Debug.LogError("Top Prefab に PlayerTop.cs が付いていません！");
-            }
-        }
-    }
-
-    // ------------------------------------------------------
-    // 生成済みベイの破棄（ラウンドリセット）
-    // ------------------------------------------------------
-    void ClearExisting()
-    {
-        foreach (var top in activeTops)
-        {
-            if (top != null)
-                Destroy(top.gameObject);
-        }
-        activeTops.Clear();
-    }
-
-    // ------------------------------------------------------
-    // KnockOutチェック + 勝敗判定
-    // ------------------------------------------------------
     void Update()
     {
-      /*
-        for (int i = activeTops.Count - 1; i >= 0; i--)
-        {
-            var top = activeTops[i];
-            if (top == null)
-            {
-                activeTops.RemoveAt(i);
-                continue;
-            }
+        if (!gameStarted || gameEnded) return;
 
-            // 落下判定（Y が -5 など）
-            if (top.transform.position.y < -1f || top.IsKnockedOut())
+        CheckBayOutOfStage();
+        CheckWinner();
+    }
+
+    // =================================================
+    // ★ 外部(UIボタン)から呼ぶゲーム開始関数
+    // =================================================
+    public void StartGame()
+    {
+        if (gameStarted) return;
+
+        Debug.Log("=== ゲーム開始 ===");
+
+        gameStarted = true;
+        gameEnded = false;
+
+        aliveBays.Clear();
+
+        // 死亡イベント登録
+        //PlayerTop.OnAnyBayDead += OnBayDead;
+
+        SpawnBays();     // ← ベイを生成
+    }
+
+    // =================================================
+    // ベイ生成
+    // =================================================
+     public void SpawnBays()
+    {
+        aliveBays.Clear();
+
+        for (int i = 0; i < spawnCount; i++)
+        {
+            GameObject prefab = bayPrefabs[Random.Range(0, bayPrefabs.Length)];
+
+            Vector2 pos2D = Random.insideUnitCircle * spawnRadius;
+            Vector3 spawnPos = stageCenter.position + new Vector3(pos2D.x, 0, pos2D.y);
+
+            GameObject bayObj = Instantiate(prefab, spawnPos, Quaternion.identity);
+
+            PlayerTop bay = bayObj.GetComponent<PlayerTop>();
+            aliveBays.Add(bay);
+        }
+    }
+
+    // =================================================
+    // 落下チェック
+    // =================================================
+    void CheckBayOutOfStage()
+    {
+        for (int i = aliveBays.Count - 1; i >= 0; i--)
+        {
+            PlayerTop bay = aliveBays[i];
+            if (bay == null) continue;
+
+            if (bay.transform.position.y < stadiumMinY)
             {
-                Destroy(top.gameObject);
-                activeTops.RemoveAt(i);
+                //bay.Die();
+                Destroy(bay.gameObject, 0.2f);
             }
         }
+    }
 
-        // 勝者が1体になったらリセット
-        if (activeTops.Count <= 1)
+    // =================================================
+    // 死亡イベント
+    // =================================================
+    void OnBayDead(PlayerTop deadBay)
+    {
+        aliveBays.Remove(deadBay);
+        Debug.Log(deadBay.name + " を生存リストから削除");
+    }
+
+    // =================================================
+    // 勝者判定
+    // =================================================
+    void CheckWinner()
+    {
+        if (aliveBays.Count == 1)
         {
-            Invoke(nameof(SpawnAll), respawnDelay);
-        }*/
+            PlayerTop winner = aliveBays[0];
+            Debug.Log("勝者は: " + winner.name);
+            OnGameEnd(winner);
+        }
+        else if (aliveBays.Count == 0)
+        {
+            Debug.Log("全滅！勝者なし");
+            OnGameEnd(null);
+        }
+    }
+
+    // =================================================
+    // ゲーム終了
+    // =================================================
+    void OnGameEnd(PlayerTop winner)
+    {
+        gameEnded = true;
+
+        if (winner == null)
+            Debug.Log("=== GAME END ===\nWinner: なし（全滅）");
+        else
+            Debug.Log($"=== GAME END ===\nWinner: {winner.name}");
     }
 }
