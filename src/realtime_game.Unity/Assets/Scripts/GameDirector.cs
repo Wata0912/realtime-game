@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 public class GameDirector : MonoBehaviour
 {
@@ -17,6 +18,8 @@ public class GameDirector : MonoBehaviour
     RoomModel roomModel;
     PlayerTop myPlayer;
     [SerializeField] public Transform stageCenter;
+    
+
 
     int myUserId;
     public Dictionary<Guid, RoomUser> players = new Dictionary<Guid, RoomUser>();
@@ -206,20 +209,6 @@ public class GameDirector : MonoBehaviour
             user.bay = bay;
         }
     }
-
-    /*
-    void OnKnockback(Guid targetId, Vector3 dir, float force)
-    {
-        if (!players.TryGetValue(targetId, out var user))
-            return;
-
-        if (user.bay == null)
-            return;
-
-        Debug.Log("押された");
-        user.bay.ApplyKnockback(dir, force);
-    }*/
-
 
     //========================================
     //ベイの死亡
