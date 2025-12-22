@@ -560,7 +560,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 273030914}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -898,7 +898,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 388825074}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1771,6 +1771,7 @@ MonoBehaviour:
   LeaveButton: {fileID: 174565850}
   JoinButton: {fileID: 273030916}
   Userprefub: {fileID: 7521916748141360360, guid: 3115abc622a87ac419ef23837498afe5, type: 3}
+  ReadyButton: {fileID: 1170895998}
   gameDirector: {fileID: 913287701}
 --- !u!1 &1132701057
 GameObject:
@@ -1804,6 +1805,7 @@ MonoBehaviour:
   LeaveButton: {fileID: 0}
   JoinButton: {fileID: 0}
   Userprefub: {fileID: 0}
+  ReadyButton: {fileID: 0}
   gameDirector: {fileID: 0}
 --- !u!4 &1132701059
 Transform:
@@ -1846,7 +1848,7 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1170895996}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0

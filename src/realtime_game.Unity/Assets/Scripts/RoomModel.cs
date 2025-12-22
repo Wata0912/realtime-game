@@ -12,11 +12,12 @@ public class RoomModel : BaseModel, IRoomHubReceiver
 {
     private GrpcChannelx channel;
     private IRoomHub roomHub;
-    [SerializeField] Button LeaveButton;    // 退室ボタン
-    [SerializeField] Button JoinButton;     // 入室ボタン
+    [SerializeField] public Button LeaveButton;    // 退室ボタン
+    [SerializeField] public Button JoinButton;     // 入室ボタン
     [SerializeField] GameObject Userprefub; //ユーザー情報所持の空オブジェクト
     RoomUser roomUser;                      //ユーザー情報所持スクリプト
     bool GameReady  = false;
+    [SerializeField] public Button ReadyButton;
     [SerializeField] GameDirector gameDirector;
     bool isConnected;
 
@@ -39,6 +40,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     {
         // 初期状態では接続していない
         roomHub = null;
+        ReadyButton.interactable = false;
     }
 
     public async UniTask ConnectAsync()
@@ -75,6 +77,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
             // UI の状態更新
             JoinButton.interactable = false;
             LeaveButton.interactable = true;
+            ReadyButton.interactable = true;
         }
     }
 
@@ -120,6 +123,11 @@ public class RoomModel : BaseModel, IRoomHubReceiver
 
         Debug.Log($"[RoomModel] AllReady received = {allReady}");
         OnAllReadyStateChangedEvent?.Invoke(allReady);
+
+        // UI の状態更新
+        JoinButton.interactable = false;
+        LeaveButton.interactable = false;
+        ReadyButton.interactable = false;
 
     }
 

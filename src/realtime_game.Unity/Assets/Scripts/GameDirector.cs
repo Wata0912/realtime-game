@@ -2,6 +2,7 @@ using Cysharp.Threading.Tasks;
 using Shared.Interfaces.StreamingHubs;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
@@ -72,11 +73,19 @@ public class GameDirector : MonoBehaviour
         GameObject User = Instantiate(Userprefub);
         var userModel = User.AddComponent<RoomUser>();
 
+        userModel.ConnectionId = user.ConnectionId;
         userModel.userId = user.UserData.Id;
         userModel.userName = user.UserData.Name;
 
 
-        Debug.Log($"Join→{userModel.userId}:{userModel.userName}");
+        Debug.Log($"Join→{userModel.userId}:{userModel.userName}:{userModel.ConnectionId}");
+
+        players.Add(user.ConnectionId,userModel);
+
+        foreach (var player in players)
+        {
+            Debug.Log($"player:{player.Value.userName}");
+        }
         // 接続IDをキーとして保持
         players[user.ConnectionId] = userModel;
     }
@@ -199,6 +208,7 @@ public class GameDirector : MonoBehaviour
             PlayerTop bay = bayObj.GetComponent<PlayerTop>();
             bay.stageCenter = stageCenter;
 
+
             // ローカル / リモート判定
             bay.Initialize(roomModel.ConnectionId,user.userId, user.userId == myUserId);
 
@@ -216,7 +226,7 @@ public class GameDirector : MonoBehaviour
     public void OnDead(Guid connectionId)
     {
         if (!players.TryGetValue(connectionId, out var user))
-            return;
+            //return;
 
         if (user.bay != null) return;
 
@@ -225,14 +235,28 @@ public class GameDirector : MonoBehaviour
             return;
 
         // リモートベイ専用処理
-        user.bay.ApplyRemoteDead();
+        user.bay.isDead = true;
+        Destroy(user.bay);
+        //user.bay.ApplyRemoteDead();
 
         Debug.Log($"Remote Die: {user.userName}");
     }
 
     void OnGameEnd(int winnerUserId)
     {
-     
+        roomModel.ReadyButton.interactable = true;
+        roomModel.LeaveButton.interactable = true;
+
+        foreach (var pair in players)
+        {
+            RoomUser user = pair.Value;
+
+            if (user.bay = null) continue;
+
+            Destroy(user.bay, 0.1f);
+        }
+      
+
         if (winnerUserId == myUserId)
         {
             Debug.Log("YOU WIN");

@@ -286,7 +286,7 @@ public class PlayerTop : MonoBehaviour
             roomModel.DeadAsync().Forget();
         }
 
-        rb.velocity = Vector3.zero;
+       
         rb.angularVelocity = Vector3.zero;
         rb.isKinematic = true;
 
@@ -308,20 +308,9 @@ public class PlayerTop : MonoBehaviour
 
         if (moveTween != null) moveTween.Kill();
         if (rotTween != null) rotTween.Kill();
+      
+        Destroy(gameObject, 0.1f);
 
-        rb.velocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-        rb.isKinematic = true;
-
-        Collider col = GetComponent<Collider>();
-        if (col != null)
-            col.enabled = false;
-
-        foreach (var r in GetComponentsInChildren<Renderer>())
-            r.enabled = false;
-
-        if (cursorObject != null)
-            cursorObject.SetActive(false);
     }
 
 
