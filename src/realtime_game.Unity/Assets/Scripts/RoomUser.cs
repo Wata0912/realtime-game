@@ -10,6 +10,6 @@ public class RoomUser : MonoBehaviour
 
     // 今操作しているベイ（死んだら null）
     public PlayerTop bay;
+    public GameObject userObject;
 
-   
 }

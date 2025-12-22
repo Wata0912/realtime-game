@@ -72,11 +72,11 @@ public class GameDirector : MonoBehaviour
         // キャラクター生成
         GameObject User = Instantiate(Userprefub);
         var userModel = User.AddComponent<RoomUser>();
-
+       
         userModel.ConnectionId = user.ConnectionId;
         userModel.userId = user.UserData.Id;
         userModel.userName = user.UserData.Name;
-
+        userModel.userObject = User;
 
         Debug.Log($"Join→{userModel.userId}:{userModel.userName}:{userModel.ConnectionId}");
 
@@ -106,7 +106,11 @@ public class GameDirector : MonoBehaviour
                 // 全キャラクターを削除（自分以外）
                 foreach (var obj in players.Values)
                 {
-                    Destroy(obj);
+                    if (obj.bay != null)
+                        Destroy(obj.bay.gameObject);
+
+                    if (obj.userObject != null)
+                        Destroy(obj.userObject);
                 }
 
                 // ローカルの一覧もクリア
@@ -129,10 +133,21 @@ public class GameDirector : MonoBehaviour
         // 該当ユーザーが一覧に存在すれば削除
         if (players.TryGetValue(connectionId, out var obj))
         {
-            Destroy(obj);                 // 画面から削除
-            players.Remove(connectionId);  // 管理リストから削除
-
             Debug.Log($"ユーザー退室→{players[connectionId].userId}:{players[connectionId].userName}");
+            if (obj.bay != null)
+            {
+                Destroy(obj.bay.gameObject);
+            }
+
+            // ★ユーザー表示削除
+            if (obj.userObject != null)
+            {
+                Destroy(obj.userObject);
+            }
+
+            players.Remove(connectionId);  // 管理リストから削除
+            //Destroy(obj);                 // 画面から削除
+
         }
         // 存在しなければ何もしない
     }
@@ -235,10 +250,11 @@ public class GameDirector : MonoBehaviour
             return;
 
         // リモートベイ専用処理
-        user.bay.isDead = true;
-        Destroy(user.bay);
+        //user.bay.isDead = true;
+        //Destroy(user.bay);
         //user.bay.ApplyRemoteDead();
 
+        user.bay.ApplyRemoteDead(); // Fixed: Use ApplyRemoteDead
         Debug.Log($"Remote Die: {user.userName}");
     }
 
@@ -247,6 +263,7 @@ public class GameDirector : MonoBehaviour
         roomModel.ReadyButton.interactable = true;
         roomModel.LeaveButton.interactable = true;
 
+        /*
         foreach (var pair in players)
         {
             RoomUser user = pair.Value;
@@ -254,7 +271,7 @@ public class GameDirector : MonoBehaviour
             if (user.bay = null) continue;
 
             Destroy(user.bay, 0.1f);
-        }
+        }*/
       
 
         if (winnerUserId == myUserId)

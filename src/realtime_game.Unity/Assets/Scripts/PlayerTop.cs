@@ -274,6 +274,7 @@ public class PlayerTop : MonoBehaviour
     // =========================
     public void Die()
     {
+        
         if (isDead) return;
         isDead = true;
 
@@ -286,31 +287,35 @@ public class PlayerTop : MonoBehaviour
             roomModel.DeadAsync().Forget();
         }
 
-       
-        rb.angularVelocity = Vector3.zero;
-        rb.isKinematic = true;
+        /*
+         rb.angularVelocity = Vector3.zero;
+         rb.isKinematic = true;
 
-        Collider col = GetComponent<Collider>();
-        if (col != null)
-            col.enabled = false;
+         Collider col = GetComponent<Collider>();
+         if (col != null)
+             col.enabled = false;
 
-        foreach (var r in GetComponentsInChildren<Renderer>())
-            r.enabled = false;
+         foreach (var r in GetComponentsInChildren<Renderer>())
+             r.enabled = false;
 
-        if (cursorObject != null)
-            cursorObject.SetActive(false);
+         if (cursorObject != null)
+             cursorObject.SetActive(false);
+        */
+        Destroy(gameObject, 0.1f);
     }
 
     public void ApplyRemoteDead()
     {
+        
         if (isDead) return;
         isDead = true;
 
         if (moveTween != null) moveTween.Kill();
         if (rotTween != null) rotTween.Kill();
       
+        //this.gameObject.SetActive(false);
         Destroy(gameObject, 0.1f);
-
+        
     }
 
 
