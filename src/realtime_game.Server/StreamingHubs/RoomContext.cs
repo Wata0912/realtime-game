@@ -1,4 +1,5 @@
 ﻿using Cysharp.Runtime.Multicast;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
 using realtime_game.Server.StreamingHubs;
 using Shared.Interfaces.StreamingHubs;
 
@@ -94,8 +95,9 @@ namespace realtime_game.Server.StreamingHubs
             bool currentAllReady = IsAllUserReady();
 
             Console.WriteLine(
-       $"[RoomContext] AllReady check: {currentAllReady} (last={lastAllReadyState})"
-   );
+                $"[RoomContext] AllReady check: {currentAllReady} (last={lastAllReadyState})");
+
+            Console.WriteLine("すべてのプレイヤーの準備完了");
 
             // 前回の状態と違う場合のみ通知する
             if (currentAllReady != lastAllReadyState)
@@ -134,6 +136,10 @@ namespace realtime_game.Server.StreamingHubs
                     return false;
                 }
             }
+            foreach (var user in RoomUserDataList.Values)
+            {
+                user.IsAlive = true;
+            }
 
             // 全員 Ready
             return true;
@@ -152,6 +158,38 @@ namespace realtime_game.Server.StreamingHubs
                     OnAllReadyStateChanged?.Invoke(currentAllReady);
                 }
             }
+        }
+        // -----------------------------
+        // 残っているベイが最後の1個なのか
+        // -----------
+        public RoomUserData CheckGameEnd()
+        {
+            var aliveBays = RoomUserDataList.Values
+                .Where(b => b.IsAlive)
+                .ToList();
+            Console.WriteLine("勝敗判定中");
+            if (aliveBays.Count != 1)
+            {
+                Console.WriteLine("勝者未確定");
+                return null;
+            }
+
+            var winner = aliveBays[0];
+            Console.WriteLine($"生存ベイ{winner.JoinedUser.UserData.Name}");
+
+            foreach (var user in RoomUserDataList.Values)
+            {
+                if (user.ToReady)
+                {
+                    user.ToReady = false;
+
+                }
+            }
+
+            lastAllReadyState = false;
+
+            return winner;
+
         }
 
 

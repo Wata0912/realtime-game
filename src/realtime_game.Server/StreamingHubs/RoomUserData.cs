@@ -9,5 +9,6 @@ namespace realtime_game.Server.StreamingHubs
         public JoinedUser JoinedUser;
         internal Vector3 pos;
         public bool ToReady;
+        public bool IsAlive;
     }
 }

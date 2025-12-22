@@ -4,6 +4,7 @@ using realtime_game.Server.Models.Entities;
 using realtime_game.Server.StreamingHubs;
 using Shared.Interfaces.StreamingHubs;
 using System.Numerics;
+using System.Reflection;
 using UnityEngine;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using Quaternion = UnityEngine.Quaternion;
@@ -65,7 +66,6 @@ namespace realtime_game.Server.StreamingHubs
 
             // 自分以外のメンバーに「誰か入ってきたよ」と通知
             this.roomContext.Group.Except([this.ConnectionId]).OnJoin(joinedUser);
-
 
             // ログ出力
             Console.WriteLine($"[JOIN] User '{user.Name}' (ID={user.Id}) joined room '{roomName}'.");
@@ -181,13 +181,16 @@ namespace realtime_game.Server.StreamingHubs
         {
             if (roomContext == null) return;
 
+            
             // ルーム全体にブロードキャスト
             roomContext.Group.All.OnAllReadyStateChanged(allReady);
         }
 
 
 
-
+        // ---------------------------------------------------------
+        // ベイ移動受信
+        // ---------------------------------------------------------
         public Task MoveAsync(UnityEngine.Vector3 pos, Quaternion rot, int seq)
         {
             if (roomContext == null)
@@ -204,7 +207,59 @@ namespace realtime_game.Server.StreamingHubs
             return Task.CompletedTask;
         }
 
-       
+        public Task KnockbackAsync(Guid targetId, Vector3 dir, float force)
+        {
+            if (roomContext == null)
+                return Task.CompletedTask;
+
+            // 全員にノックバック通知（自分含む）
+            roomContext.Group.All.OnKnockback(targetId, dir, force);
+
+            return Task.CompletedTask;
+        }
+
+
+        // ---------------------------------------------------------
+        // ベイ死亡受信
+        // ---------------------------------------------------------
+        public Task DeadAsync()
+        {
+            RoomUserData Winner;
+
+            if (roomContext == null)
+                return Task.CompletedTask;
+            Console.WriteLine($"[Dead] User '{this.ConnectionId}");
+
+            // ===== サーバー状態を更新 =====
+            if (!roomContext.RoomUserDataList.TryGetValue(this.ConnectionId, out var bay))
+                return Task.CompletedTask;
+
+            if (!bay.IsAlive)
+                return Task.CompletedTask;
+
+            bay.IsAlive = false;
+
+            // 全員に「このConnectionIdのベイが死亡した」と通知
+            roomContext.Group.All.OnDead(this.ConnectionId);
+
+            Winner =  roomContext.CheckGameEnd();
+
+            if (Winner == null)
+            {
+                Console.WriteLine("勝者未確定");
+                return Task.CompletedTask;
+            }
+
+
+            // 全クライアントに勝者通知
+            roomContext.Group.All.OnGameEnd(Winner.JoinedUser.UserData.Id);
+
+            return Task.CompletedTask;
+        }
+
+        
+
+
 
     }
 }

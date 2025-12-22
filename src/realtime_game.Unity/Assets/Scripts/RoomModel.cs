@@ -3,6 +3,8 @@ using MagicOnion;
 using MagicOnion.Client;
 using Shared.Interfaces.StreamingHubs;
 using System;
+using System.Threading.Tasks;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -28,6 +30,10 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     public Action<Guid, Vector3, Quaternion, int> OnMoveBay { get; set; }
     //全ユーザー準備完了通知
     public Action<bool> OnAllReadyStateChangedEvent;
+    public Action<Guid> OnDeadBay { get; set; }
+    public Action<int> OnEnd { get; set; }
+    public Action<Guid, Vector3, float> OnKnockbackEvent;
+
 
     private void Start()
     {
@@ -47,6 +53,9 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         isConnected = true;
     }
 
+    //========================================s
+    // 入室処理
+    //========================================
     public async UniTask JoinAsync(string room, int userId)
     {
 
@@ -69,7 +78,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         }
     }
 
-    //========================================s
+    //========================================
     // MagicOnion 切断処理
     //========================================
     public async UniTask DisconnectAsync()
@@ -118,8 +127,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     // 退出
     //========================================
     public async UniTask LeaveAsync()
-    {
-       
+    {      
         if (roomHub != null)
         {
             // サーバーに退室を通知（RoomHub.LeaveAsync が呼ばれる）
@@ -143,6 +151,39 @@ public class RoomModel : BaseModel, IRoomHubReceiver
             await roomHub.MoveAsync(pos, rot, seq);
     }
 
+    public async UniTask KnockbackAsync(Guid targetId, Vector3 dir, float force)
+    {
+        if (roomHub == null)
+            return;
+
+        // 念のため正規化（安全）
+        dir.y = 0f;
+        if (dir.sqrMagnitude < 0.0001f)
+            return;
+
+        dir.Normalize();
+
+        await roomHub.KnockbackAsync(targetId, dir, force);
+    }
+
+
+    //========================================
+    // 自分のベイの死亡送信
+    //========================================
+    public async UniTask DeadAsync()
+    {
+        Debug.Log($"死亡");
+        await roomHub.DeadAsync();
+    }
+
+    //========================================
+    // 衝突判定(別方法での実装のため未実装)
+    //========================================
+    public void OnKnockback(Guid targetId, Vector3 dir, float force)
+    {
+        OnKnockbackEvent?.Invoke(targetId, dir, force);
+    }
+
     // === StreamingHub コールバック ===
 
     //========================================
@@ -158,5 +199,11 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     // 自身の移動以外でベイが動いたときの通知
     //========================================
     public void OnMove(Guid id, Vector3 pos, Quaternion rot, int seq) => OnMoveBay?.Invoke(id, pos, rot,seq);
+    //========================================
+    // 自身以外のベイの死亡通知
+    //========================================
+    public void OnDead(Guid id) => OnDeadBay?.Invoke(id);
+
+    public void OnGameEnd(int id) =>  OnEnd?.Invoke(id);
 
 }

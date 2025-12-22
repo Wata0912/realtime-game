@@ -21,11 +21,22 @@ namespace Shared.Interfaces.StreamingHubs
         //ユーザーの退出通知
         void OnLeave(Guid connectionId);
 
+        //ユーザーの準備完了通知
         public void OnReadyStateChanged(Guid connectionId, bool isReady);
 
+        //すべてのユーザーの準備完了通知
         void OnAllReadyStateChanged(bool allReady);
 
-        //ユーザーの位置通知
+        //ベイの位置通知
         void OnMove(Guid connectionId, Vector3 pos, Quaternion quaternion, int seq);
+
+        void OnKnockback(Guid targetId, Vector3 dir, float force);
+
+        //ベイのの死亡通知
+        void OnDead(Guid connectionId);
+
+        //ゲームの終了通知
+        void OnGameEnd(int id);
+
     }
 }

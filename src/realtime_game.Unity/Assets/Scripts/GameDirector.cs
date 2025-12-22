@@ -19,7 +19,7 @@ public class GameDirector : MonoBehaviour
     [SerializeField] public Transform stageCenter;
 
     int myUserId;
-    Dictionary<Guid, RoomUser> players = new Dictionary<Guid, RoomUser>();
+    public Dictionary<Guid, RoomUser> players = new Dictionary<Guid, RoomUser>();
 
     void Start()
     {
@@ -28,6 +28,9 @@ public class GameDirector : MonoBehaviour
         roomModel.OnJoinedUser += OnJoinedUser;
         roomModel.OnMoveBay += OnMoveUser;
         roomModel.OnLeftUser += OnLeaveUser;
+        roomModel.OnDeadBay += OnDead;
+        roomModel.OnEnd += OnGameEnd;
+        //roomModel.OnKnockbackEvent += OnKnockback;
 
         roomModel.ConnectAsync().Forget();
         roomModel.OnAllReadyStateChangedEvent += OnAllReadyStateChanged;
@@ -194,7 +197,7 @@ public class GameDirector : MonoBehaviour
             bay.stageCenter = stageCenter;
 
             // ローカル / リモート判定
-            bay.Initialize(user.userId, user.userId == myUserId);
+            bay.Initialize(roomModel.ConnectionId,user.userId, user.userId == myUserId);
 
             // RoomModel を渡す（同期用）
             bay.roomModel = roomModel;
@@ -203,4 +206,52 @@ public class GameDirector : MonoBehaviour
             user.bay = bay;
         }
     }
+
+    /*
+    void OnKnockback(Guid targetId, Vector3 dir, float force)
+    {
+        if (!players.TryGetValue(targetId, out var user))
+            return;
+
+        if (user.bay == null)
+            return;
+
+        Debug.Log("押された");
+        user.bay.ApplyKnockback(dir, force);
+    }*/
+
+
+    //========================================
+    //ベイの死亡
+    //========================================
+    public void OnDead(Guid connectionId)
+    {
+        if (!players.TryGetValue(connectionId, out var user))
+            return;
+
+        if (user.bay != null) return;
+
+        // 自分のベイ → 何もしない（すでにDie済み）
+        if (user.bay.isLocalPlayer)
+            return;
+
+        // リモートベイ専用処理
+        user.bay.ApplyRemoteDead();
+
+        Debug.Log($"Remote Die: {user.userName}");
+    }
+
+    void OnGameEnd(int winnerUserId)
+    {
+     
+        if (winnerUserId == myUserId)
+        {
+            Debug.Log("YOU WIN");
+        }
+        else
+        {
+            Debug.Log("YOU LOSE");
+        }
+    }
+
 }
