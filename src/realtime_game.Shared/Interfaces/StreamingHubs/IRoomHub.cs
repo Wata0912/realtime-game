@@ -26,6 +26,8 @@ namespace Shared.Interfaces.StreamingHubs
         //位置同期
         Task MoveAsync(Vector3 pos, Quaternion quaternion, int seq);
 
+        Task SendSpawnPositionAsync(float x, float z);
+
         Task KnockbackAsync(Guid targetId, Vector3 dir, float force);
 
         //ベイ死亡

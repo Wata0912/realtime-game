@@ -86,12 +86,15 @@ MonoBehaviour:
   centerForce: 5
   pushForce: 12
   collisionCooldown: 0.2
+  currentHP: 40
+  currentDMG: 2
+  knockbackLockTime: 0.15
   sendInterval: 0.03
   lerpSpeed: 12
+  isDead: 0
   cursorObject: {fileID: 6744321961219995087}
-  localCursorColor: {r: 1, g: 0, b: 0, a: 1}
-  remoteCursorColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   cursorTransform: {fileID: 6053393086871779654}
+  stageRadius: 11
 --- !u!136 &3423727611396501526
 CapsuleCollider:
   m_ObjectHideFlags: 0

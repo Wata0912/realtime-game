@@ -63,7 +63,7 @@ public class PlayerTop : MonoBehaviour
     [Header("Cursor")]
     public GameObject cursorObject;
     [SerializeField] private Transform cursorTransform;
-    [SerializeField] float stageRadius = 15f;
+    [SerializeField] float stageRadius = 9f;
 
 
 
@@ -83,7 +83,7 @@ public class PlayerTop : MonoBehaviour
         else
         {
             rb.isKinematic = true;
-            rb.velocity = Vector3.zero;
+            rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
         }
     }
@@ -240,7 +240,7 @@ public class PlayerTop : MonoBehaviour
         dir.y = 0f;
         dir.Normalize();
 
-        rb.velocity = Vector3.zero;
+        rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
         // ★相手の pushForce を受け取る

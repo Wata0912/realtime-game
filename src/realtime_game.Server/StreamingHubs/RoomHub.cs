@@ -3,6 +3,7 @@ using realtime_game.Server.Models.Contexts;
 using realtime_game.Server.Models.Entities;
 using realtime_game.Server.StreamingHubs;
 using Shared.Interfaces.StreamingHubs;
+using Shared.Models;
 using System.Numerics;
 using System.Reflection;
 using UnityEngine;
@@ -22,7 +23,7 @@ namespace realtime_game.Server.StreamingHubs
         // 現在の接続が属しているルームの情報（部屋名・ユーザーリストなど）
         private RoomContext roomContext;
 
-      
+
 
 
 
@@ -31,13 +32,11 @@ namespace realtime_game.Server.StreamingHubs
         // ---------------------------------------------------------
         public async Task<JoinedUser[]> JoinAsync(string roomName, int userId)
         {
-            // 複数ユーザーが同時に同じルームに入る時の競合を避けるためロック
+            // ルーム取得 or 作成（ここは repos を lock）
             lock (roomContextRepos)
             {
-                // 指定ルームを取得（無ければ null）
                 this.roomContext = roomContextRepos.GetContext(roomName);
 
-                // 無ければ新しく作成する
                 if (this.roomContext == null)
                 {
                     this.roomContext = roomContextRepos.CreateContext(roomName);
@@ -45,40 +44,47 @@ namespace realtime_game.Server.StreamingHubs
                 }
             }
 
-            // ルーム内の MagicOnion グループに接続IDを追加
-            // → クライアントにブロードキャストが送れるようになる
+            // グループ追加（スレッド安全）
             this.roomContext.Group.Add(this.ConnectionId, Client);
 
-            // DB からユーザー情報を取得
+            // DB 取得
             GameDbContext context = new GameDbContext();
-            User user = context.Users.Where(user => user.Id == userId).First();
+            User user = context.Users.First(u => u.Id == userId);
 
-            // このユーザーのルーム内情報を作成
             var joinedUser = new JoinedUser
             {
                 ConnectionId = this.ConnectionId,
                 UserData = user
             };
 
-            // ルームのユーザー一覧に追加
-            var roomUserData = new RoomUserData() { JoinedUser = joinedUser };
-            this.roomContext.RoomUserDataList[ConnectionId] = roomUserData;
+            var roomUserData = new RoomUserData
+            {
+                JoinedUser = joinedUser
+            };
 
-            // 自分以外のメンバーに「誰か入ってきたよ」と通知
+            JoinedUser[] result;
+
+            // ★ ここが最重要：追加と列挙を同一 lock に入れる
+            lock (this.roomContext)
+            {
+                this.roomContext.RoomUserDataList[this.ConnectionId] = roomUserData;
+
+                result = this.roomContext.RoomUserDataList
+                    .Values
+                    .Where(v => v?.JoinedUser != null)
+                    .Select(v => v.JoinedUser)
+                    .ToArray();
+            }
+
+            // 通知（lock の外でOK）
             this.roomContext.Group.Except([this.ConnectionId]).OnJoin(joinedUser);
 
-            // ログ出力
-            Console.WriteLine($"[JOIN] User '{user.Name}' (ID={user.Id}) joined room '{roomName}'.");
-            Console.WriteLine($"[ROOM STATUS] {roomName}: {this.roomContext.RoomUserDataList.Count} users now connected.");
+            Console.WriteLine($"[JOIN] User '{user.Name}' joined room '{roomName}'.");
 
-            // RoomContext 生成直後 or 取得直後
+            // イベント登録（多重登録防止は別途対応可）
             this.roomContext.OnAllReadyStateChanged += OnAllReadyStateChanged;
 
-
-            // 入室したユーザーに全参加者一覧を返す
-            return this.roomContext.RoomUserDataList
-                .Select(f => f.Value.JoinedUser)
-                .ToArray();
+            return result;
         }
 
         // ---------------------------------------------------------
@@ -185,6 +191,43 @@ namespace realtime_game.Server.StreamingHubs
             // ルーム全体にブロードキャスト
             roomContext.Group.All.OnAllReadyStateChanged(allReady);
         }
+
+        public async Task SendSpawnPositionAsync(float x, float z)
+        {
+            var ctx = roomContext;
+
+            ctx.SpawnPositions[Context.ContextId] = (x, z);
+
+            // 全員分揃ったか？
+            if (ctx.SpawnPositions.Count < ctx.RoomUserDataList.Count)
+                return;
+
+            // ===== カウントダウン =====
+            for (int i = 3; i > 0; i--)
+            {
+                ctx.Group.All.OnSpawnCountdown(i);
+                await Task.Delay(1000);
+            }
+
+            // ===== ベイ生成データ作成 =====
+            var list = ctx.SpawnPositions.Select(p => new SpawnBayData
+            {
+                PlayerId = p.Key.ToString(),
+                X = p.Value.x,
+                Z = p.Value.z,
+                BayType = 0
+
+            }).ToArray();
+
+            foreach(var item in list)
+            {
+                Console.WriteLine(item.PlayerId,item.X, item.Z);
+            }
+
+            ctx.Group.All.OnSpawnBays(list);
+        }
+
+
 
 
 

@@ -30,8 +30,9 @@ namespace realtime_game.Server.StreamingHubs
         public Dictionary<Guid, RoomUserData> RoomUserDataList { get; }
             = new Dictionary<Guid, RoomUserData>();
 
+        public Dictionary<Guid, (float x, float z)> SpawnPositions
+      = new Dictionary<Guid, (float x, float z)>();
 
-      
         // -----------------------------
         // 全員Ready状態が変化した時に呼ばれるイベント
         // true  : 全員Readyになった

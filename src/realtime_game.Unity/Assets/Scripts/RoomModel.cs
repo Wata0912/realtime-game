@@ -2,11 +2,14 @@
 using MagicOnion;
 using MagicOnion.Client;
 using Shared.Interfaces.StreamingHubs;
+using Shared.Models;
 using System;
+using System.Numerics;
 using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
+using Vector3 = UnityEngine.Vector3;
 
 public class RoomModel : BaseModel, IRoomHubReceiver
 {
@@ -14,6 +17,8 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     private IRoomHub roomHub;
     [SerializeField] public Button LeaveButton;    // 退室ボタン
     [SerializeField] public Button JoinButton;     // 入室ボタン
+    [SerializeField] public GameObject lobbyPanel;
+    [SerializeField] public GameObject WinnerPanel;
     [SerializeField] GameObject Userprefub; //ユーザー情報所持の空オブジェクト
     RoomUser roomUser;                      //ユーザー情報所持スクリプト
     bool GameReady  = false;
@@ -28,7 +33,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     // 他ユーザー退室通知（GameDirector が購読する）
     public Action<Guid> OnLeftUser { get; set; }
     // ベイ移動通知（GameDirector が購読する）
-    public Action<Guid, Vector3, Quaternion, int> OnMoveBay { get; set; }
+    public Action<Guid, Vector3, UnityEngine.Quaternion, int> OnMoveBay { get; set; }
     //全ユーザー準備完了通知
     public Action<bool> OnAllReadyStateChangedEvent;
     public Action<Guid> OnDeadBay { get; set; }
@@ -102,6 +107,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     {
         Debug.Log("[Unity] Ready button clicked");
         await roomHub.SetMyReadyAsync(true);
+        ReadyButton.interactable = false;
     }
 
     public void OnReadyStateChanged(Guid connectionId, bool isReady)
@@ -128,6 +134,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         JoinButton.interactable = false;
         LeaveButton.interactable = false;
         ReadyButton.interactable = false;
+        lobbyPanel.SetActive(false);
 
     }
 
@@ -147,13 +154,15 @@ public class RoomModel : BaseModel, IRoomHubReceiver
             // ボタン状態を切り替え
             JoinButton.interactable = true;
             LeaveButton.interactable = false;
+            ReadyButton.interactable = false;
         }
     }
 
+    
     //========================================
     // 自分のベイの移動送信
     //========================================
-    public async UniTask MoveAsync(Vector3 pos, Quaternion rot, int seq)
+    public async UniTask MoveAsync(Vector3 pos, UnityEngine.Quaternion rot, int seq)
     {
         if (roomHub != null)
             await roomHub.MoveAsync(pos, rot, seq);
@@ -174,6 +183,11 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         await roomHub.KnockbackAsync(targetId, dir, force);
     }
 
+    public Task SendSpawnPositionAsync(float x, float z)
+    {
+        return roomHub.SendSpawnPositionAsync(x, z);
+    }
+
 
     //========================================
     // 自分のベイの死亡送信
@@ -192,6 +206,20 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         OnKnockbackEvent?.Invoke(targetId, dir, force);
     }
 
+
+    public event Action<int> OnSpawnCountdown;
+    public event Action<SpawnBayData[]> OnSpawnBays;
+
+    void IRoomHubReceiver.OnSpawnCountdown(int sec)
+    {
+        OnSpawnCountdown?.Invoke(sec);
+    }
+
+    void IRoomHubReceiver.OnSpawnBays(SpawnBayData[] bays)
+    {
+        OnSpawnBays?.Invoke(bays);
+    }
+
     // === StreamingHub コールバック ===
 
     //========================================
@@ -206,7 +234,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     //========================================
     // 自身の移動以外でベイが動いたときの通知
     //========================================
-    public void OnMove(Guid id, Vector3 pos, Quaternion rot, int seq) => OnMoveBay?.Invoke(id, pos, rot,seq);
+    public void OnMove(Guid id, Vector3 pos, UnityEngine.Quaternion rot, int seq) => OnMoveBay?.Invoke(id, pos, rot,seq);
     //========================================
     // 自身以外のベイの死亡通知
     //========================================

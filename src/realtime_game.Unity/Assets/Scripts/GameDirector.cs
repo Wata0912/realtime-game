@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using Shared.Interfaces.StreamingHubs;
+using Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,17 +14,21 @@ public class GameDirector : MonoBehaviour
     RoomUser roomUser;
     [SerializeField] InputField RoomID;
     [SerializeField] InputField UserID;
-
+    [SerializeField] Text WinnerName;
     [SerializeField] GameObject Bayprefub;
 
     RoomModel roomModel;
     PlayerTop myPlayer;
     [SerializeField] public Transform stageCenter;
     
-
-
     int myUserId;
     public Dictionary<Guid, RoomUser> players = new Dictionary<Guid, RoomUser>();
+
+    [SerializeField] GameObject spawnCursorPrefab;
+    SpawnCursorController cursor;
+    bool selectingSpawn;
+
+    [SerializeField] GameObject spawnCursor;
 
     void Start()
     {
@@ -35,11 +40,21 @@ public class GameDirector : MonoBehaviour
         roomModel.OnDeadBay += OnDead;
         roomModel.OnEnd += OnGameEnd;
         //roomModel.OnKnockbackEvent += OnKnockback;
+        roomModel.OnSpawnBays += SpawnBays;
 
         roomModel.ConnectAsync().Forget();
         roomModel.OnAllReadyStateChangedEvent += OnAllReadyStateChanged;
+        spawnCursor.SetActive(false);
+    }
 
+    void Update()
+    {
+        if (!selectingSpawn) return;
 
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            ConfirmSpawn();
+        }
     }
 
     // =========================================================
@@ -55,7 +70,6 @@ public class GameDirector : MonoBehaviour
 
         await roomModel.JoinAsync(RoomID.text, myUserId);
         // キャラクター生成
-
 
     }
 
@@ -198,42 +212,112 @@ public class GameDirector : MonoBehaviour
         Debug.Log("[GameDirector] 全員Ready → ゲーム開始");
 
         // フェーズ遷移・カウントダウン・操作解放など
-        SpawnBays();
+        StartSpawnSelect();
+        Debug.Log($"ベイ生成座標指定開始");
+        
+    }
+
+    //ベイ生成位置設定開始
+    void StartSpawnSelect()
+    {
+        //spawnCursor = Instantiate(spawnCursor);
+        spawnCursor.SetActive(true);
+        selectingSpawn = true;
+    }
+
+
+    void ConfirmSpawn()
+    {
+        selectingSpawn = false;
+
+        Vector3 pos = spawnCursor.transform.position;
+        spawnCursor.SetActive(false);
+        //Destroy(spawnCursor);
+        Debug.Log($"POST X:{pos.x} Z:{pos.z}");
+        roomModel.SendSpawnPositionAsync(pos.x, pos.z);
+    }
+
+    
+
+//ベイ生成位置取得
+public Vector3 GetCursorWorldPos()
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        Plane plane = new Plane(Vector3.up, Vector3.zero);
+
+        if (plane.Raycast(ray, out float distance))
+        {
+            Vector3 hit = ray.GetPoint(distance);
+            hit.y = 0f;
+            return hit;
+        }
+        return Vector3.zero;
     }
 
     //========================================
     //ベイの生成
     //========================================
-    public void SpawnBays()
-    {
-        foreach (var pair in players)
+    void SpawnBays(SpawnBayData[] list)
+    {/*
+        foreach (var data in list)
         {
-            RoomUser user = pair.Value;
+            foreach (var pair in players)
+            {
+                RoomUser user = pair.Value;
 
-            // すでにベイがあるなら作らない
-            if (user.bay != null) continue;
+                // すでにベイがあるなら作らない
+                if (user.bay != null) continue;
 
-            Vector3 spawnPos = new Vector3(
-            UnityEngine.Random.Range(-3f, 3f),
-            0f,
-            UnityEngine.Random.Range(-3f, 3f)
-            );
+                Vector3 pos = new Vector3(data.X, 0, data.Z);
+                Debug.Log($"GUID{data.PlayerId}:pos{pos.x}:{pos.y}:{pos.z}");
+                GameObject bayObj= Instantiate(Bayprefub, pos, Quaternion.identity);
 
-            GameObject bayObj = Instantiate(Bayprefub, spawnPos, Quaternion.identity);
+                PlayerTop bay = bayObj.GetComponent<PlayerTop>();
+                bay.stageCenter = stageCenter;
+
+                bool isLocal =
+                    data.PlayerId == roomModel.ConnectionId.ToString();
+
+                // ローカル / リモート判定
+                bay.Initialize(roomModel.ConnectionId, user.userId, user.userId == myUserId);
+
+                // RoomModel を渡す（同期用）
+                bay.roomModel = roomModel;
+
+                // RoomUser に紐づける
+                user.bay = bay;
+            }
+        }*/
+        foreach (var data in list)
+        {
+            Guid id = Guid.Parse(data.PlayerId);
+
+            // 対応するユーザーを探す
+            if (!players.TryGetValue(id, out var user))
+                continue;
+
+            // すでにベイがあるなら生成しない
+            if (user.bay != null)
+                continue;
+
+            Vector3 pos = new Vector3(data.X, 0f, data.Z);
+            Debug.Log($"Spawn {id} at {pos}");
+
+            GameObject bayObj = Instantiate(Bayprefub, pos, Quaternion.identity);
             PlayerTop bay = bayObj.GetComponent<PlayerTop>();
+
             bay.stageCenter = stageCenter;
 
+            bool isLocal = id == roomModel.ConnectionId;
 
-            // ローカル / リモート判定
-            bay.Initialize(roomModel.ConnectionId,user.userId, user.userId == myUserId);
-
-            // RoomModel を渡す（同期用）
+            bay.Initialize(id, user.userId, isLocal);
             bay.roomModel = roomModel;
 
-            // RoomUser に紐づける
             user.bay = bay;
         }
     }
+
+  
 
     //========================================
     //ベイの死亡
@@ -249,10 +333,7 @@ public class GameDirector : MonoBehaviour
         if (user.bay.isLocalPlayer)
             return;
 
-        // リモートベイ専用処理
-        //user.bay.isDead = true;
-        //Destroy(user.bay);
-        //user.bay.ApplyRemoteDead();
+        
 
         user.bay.ApplyRemoteDead(); // Fixed: Use ApplyRemoteDead
         Debug.Log($"Remote Die: {user.userName}");
@@ -262,26 +343,40 @@ public class GameDirector : MonoBehaviour
     {
         roomModel.ReadyButton.interactable = true;
         roomModel.LeaveButton.interactable = true;
-
-        /*
-        foreach (var pair in players)
+        
+        string winner = null;
+        
+       foreach (var player in players)
         {
-            RoomUser user = pair.Value;
-
-            if (user.bay = null) continue;
-
-            Destroy(user.bay, 0.1f);
-        }*/
-      
-
-        if (winnerUserId == myUserId)
-        {
-            Debug.Log("YOU WIN");
+            if(player.Value .userId == winnerUserId)
+            {
+                Debug.Log($"Winner:{player.Value.userId}_{player.Value.userName}");
+                winner = player.Value.userName;
+            }
         }
-        else
-        {
-            Debug.Log("YOU LOSE");
-        }
+
+       WinnerName.text = "Winner " + winner;
+        roomModel.WinnerPanel.SetActive(true);
     }
 
+    public void Reset()
+    {
+
+        foreach (var obj in players.Values)
+        {
+            if (obj.bay != null)
+                Destroy(obj.bay.gameObject);
+
+            if (obj.userObject != null)
+                Destroy(obj.userObject);
+        }
+
+        roomModel.WinnerPanel.SetActive(false);
+        roomModel.lobbyPanel.SetActive(true);
+       
+    }
+
+
 }
+
+

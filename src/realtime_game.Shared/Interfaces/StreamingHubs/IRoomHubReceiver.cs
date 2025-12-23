@@ -1,4 +1,5 @@
 ﻿using MagicOnion;
+using Shared.Models;
 using System;
 using System.Numerics;
 using UnityEngine;
@@ -29,7 +30,10 @@ namespace Shared.Interfaces.StreamingHubs
 
         //ベイの位置通知
         void OnMove(Guid connectionId, Vector3 pos, Quaternion quaternion, int seq);
-
+        //ベイ生成カウントダウン
+        void OnSpawnCountdown(int sec);
+        //ベイの生成位置通知
+        void OnSpawnBays(SpawnBayData[] bays);
         void OnKnockback(Guid targetId, Vector3 dir, float force);
 
         //ベイのの死亡通知
