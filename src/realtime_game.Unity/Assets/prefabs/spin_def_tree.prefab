@@ -84,7 +84,7 @@ MonoBehaviour:
   moveForce: 12
   spinSpeed: 20
   centerForce: 5
-  pushForce: 18
+  pushForce: 20
   collisionCooldown: 0.2
   currentHP: 40
   currentDMG: 2
