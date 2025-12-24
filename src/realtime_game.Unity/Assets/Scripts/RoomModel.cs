@@ -205,6 +205,11 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     {
         OnKnockbackEvent?.Invoke(targetId, dir, force);
     }
+    /*
+    void OnApplicationQuit()
+    {
+        LeaveAsync();
+    }*/
 
 
     public event Action<int> OnSpawnCountdown;
