@@ -25,6 +25,7 @@ public class GameDirector : MonoBehaviour
     public Dictionary<Guid, RoomUser> players = new Dictionary<Guid, RoomUser>();
 
     [SerializeField] GameObject spawnCursorPrefab;
+    [SerializeField] GameObject spawnButton;
     SpawnCursorController cursor;
     bool selectingSpawn;
 
@@ -49,12 +50,7 @@ public class GameDirector : MonoBehaviour
 
     void Update()
     {
-        if (!selectingSpawn) return;
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            ConfirmSpawn();
-        }
+       
     }
 
     // =========================================================
@@ -222,16 +218,18 @@ public class GameDirector : MonoBehaviour
     {
         //spawnCursor = Instantiate(spawnCursor);
         spawnCursor.SetActive(true);
-        selectingSpawn = true;
+        spawnButton.SetActive(true);
+        //selectingSpawn = true;
     }
 
 
-    void ConfirmSpawn()
+    public void ConfirmSpawn()
     {
-        selectingSpawn = false;
+        //selectingSpawn = false;
 
         Vector3 pos = spawnCursor.transform.position;
         spawnCursor.SetActive(false);
+        spawnButton.SetActive(false);
         //Destroy(spawnCursor);
         Debug.Log($"POST X:{pos.x} Z:{pos.z}");
         roomModel.SendSpawnPositionAsync(pos.x, pos.z);
@@ -258,36 +256,7 @@ public Vector3 GetCursorWorldPos()
     //ベイの生成
     //========================================
     void SpawnBays(SpawnBayData[] list)
-    {/*
-        foreach (var data in list)
-        {
-            foreach (var pair in players)
-            {
-                RoomUser user = pair.Value;
-
-                // すでにベイがあるなら作らない
-                if (user.bay != null) continue;
-
-                Vector3 pos = new Vector3(data.X, 0, data.Z);
-                Debug.Log($"GUID{data.PlayerId}:pos{pos.x}:{pos.y}:{pos.z}");
-                GameObject bayObj= Instantiate(Bayprefub, pos, Quaternion.identity);
-
-                PlayerTop bay = bayObj.GetComponent<PlayerTop>();
-                bay.stageCenter = stageCenter;
-
-                bool isLocal =
-                    data.PlayerId == roomModel.ConnectionId.ToString();
-
-                // ローカル / リモート判定
-                bay.Initialize(roomModel.ConnectionId, user.userId, user.userId == myUserId);
-
-                // RoomModel を渡す（同期用）
-                bay.roomModel = roomModel;
-
-                // RoomUser に紐づける
-                user.bay = bay;
-            }
-        }*/
+    {
         foreach (var data in list)
         {
             Guid id = Guid.Parse(data.PlayerId);

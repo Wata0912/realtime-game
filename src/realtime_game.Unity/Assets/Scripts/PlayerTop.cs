@@ -2,6 +2,7 @@ using Cysharp.Threading.Tasks;
 using System;
 using UnityEngine;
 using DG.Tweening;
+using System.Diagnostics;
 
 
 [RequireComponent(typeof(Rigidbody))]
@@ -64,8 +65,6 @@ public class PlayerTop : MonoBehaviour
     public GameObject cursorObject;
     [SerializeField] private Transform cursorTransform;
     [SerializeField] float stageRadius = 9f;
-
-
 
     // =========================
     //初期化
@@ -246,6 +245,8 @@ public class PlayerTop : MonoBehaviour
         // ★相手の pushForce を受け取る
         rb.AddForce(dir * other.pushForce, ForceMode.Impulse);
 
+        UnityEngine.Debug.Log($"{other.pushForce}: {other.Guid}");
+
         // ★ 衝突直後に即同期
         ForceSendSync();
 
@@ -318,6 +319,18 @@ public class PlayerTop : MonoBehaviour
         
     }
 
+    // =========================
+    // ノックバック処理
+    // =========================
+    public void OnKnockback(Guid fromId, float force)
+    {
+        ApplyKnockback(force);
+    }
+
+    void ApplyKnockback(float force)
+    {
+        rb.AddForce(transform.forward * force, ForceMode.Impulse);
+    }
 
     // =========================
     //生成時代入

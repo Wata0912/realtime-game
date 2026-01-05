@@ -205,12 +205,6 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     {
         OnKnockbackEvent?.Invoke(targetId, dir, force);
     }
-    /*
-    void OnApplicationQuit()
-    {
-        LeaveAsync();
-    }*/
-
 
     public event Action<int> OnSpawnCountdown;
     public event Action<SpawnBayData[]> OnSpawnBays;
@@ -224,6 +218,8 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     {
         OnSpawnBays?.Invoke(bays);
     }
+
+  
 
     // === StreamingHub コールバック ===
 
