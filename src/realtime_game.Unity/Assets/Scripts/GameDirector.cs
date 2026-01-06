@@ -8,6 +8,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 
+
 public class GameDirector : MonoBehaviour
 {
     [SerializeField] GameObject Userprefub;
@@ -16,6 +17,7 @@ public class GameDirector : MonoBehaviour
     [SerializeField] InputField UserID;
     [SerializeField] Text WinnerName;
     [SerializeField] GameObject Bayprefub;
+    [SerializeField] UnityEngine.UI.Slider HPBer;
 
     RoomModel roomModel;
     PlayerTop myPlayer;
@@ -40,6 +42,7 @@ public class GameDirector : MonoBehaviour
         roomModel.OnLeftUser += OnLeaveUser;
         roomModel.OnDeadBay += OnDead;
         roomModel.OnEnd += OnGameEnd;
+        roomModel.OnHitBay += OnHitBay;
         //roomModel.OnKnockbackEvent += OnKnockback;
         roomModel.OnSpawnBays += SpawnBays;
 
@@ -50,7 +53,10 @@ public class GameDirector : MonoBehaviour
 
     void Update()
     {
-       
+        if (myPlayer == null)
+            return;
+
+        HPBer.value = myPlayer.currentHP;
     }
 
     // =========================================================
@@ -147,6 +153,7 @@ public class GameDirector : MonoBehaviour
             if (obj.bay != null)
             {
                 Destroy(obj.bay.gameObject);
+                //players[connectionId].bay.pushForce;
             }
 
             // ★ユーザー表示削除
@@ -232,7 +239,8 @@ public class GameDirector : MonoBehaviour
         spawnButton.SetActive(false);
         //Destroy(spawnCursor);
         Debug.Log($"POST X:{pos.x} Z:{pos.z}");
-        roomModel.SendSpawnPositionAsync(pos.x, pos.z);
+        roomModel.SendSpawnPositionAsync(pos.x, pos.z);      
+
     }
 
     
@@ -284,9 +292,60 @@ public Vector3 GetCursorWorldPos()
 
             user.bay = bay;
         }
+
+        if (players.TryGetValue(roomModel.ConnectionId ,out var Player))
+        {
+            myPlayer = Player.bay;
+        }
+
+        HPBer.gameObject.SetActive(true);
+        HPBer.maxValue = myPlayer.maxHP;
+        HPBer.value = myPlayer.currentHP;
+
     }
 
-  
+
+    public void OnHitBay(Guid a,Guid b )
+    {
+        PlayerTop LocalBay = null;
+        PlayerTop RemoteBay = null;
+
+        if (players.TryGetValue(a, out var A))
+        {
+            if (A.bay != null)
+            {
+                if (A.bay.isLocalPlayer == true)
+                {
+                    LocalBay = A.bay;
+                }else
+                {
+                    RemoteBay = A.bay;
+                }
+                
+            }
+        }
+
+        if (players.TryGetValue(b, out var B))
+        {
+            if (B.bay != null)
+            {
+                if (B.bay.isLocalPlayer == true)
+                {
+                    LocalBay = B.bay;
+                }
+                else
+                {
+                    RemoteBay = B.bay;
+                }
+            }
+        }
+
+        if(roomModel.ConnectionId == LocalBay.Guid)
+        {
+            LocalBay.Hit(RemoteBay);
+        }
+        
+    }
 
     //========================================
     //ベイの死亡
@@ -312,7 +371,8 @@ public Vector3 GetCursorWorldPos()
     {
         roomModel.ReadyButton.interactable = true;
         roomModel.LeaveButton.interactable = true;
-        
+        HPBer.gameObject.SetActive(false);
+
         string winner = null;
         
        foreach (var player in players)

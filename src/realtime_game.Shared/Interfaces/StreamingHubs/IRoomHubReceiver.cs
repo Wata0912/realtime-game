@@ -35,6 +35,8 @@ namespace Shared.Interfaces.StreamingHubs
         //ベイの生成位置通知
         void OnSpawnBays(SpawnBayData[] bays);
         void OnKnockback(Guid targetId, Vector3 dir, float force);
+        //衝突処理
+        void OnHit(Guid connectionId1,Guid connectionId2);
 
         //ベイのの死亡通知
         void OnDead(Guid connectionId);

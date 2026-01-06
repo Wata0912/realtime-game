@@ -41,6 +41,7 @@ public class PlayerTop : MonoBehaviour
     public float pushForce = 8f;
     public float collisionCooldown = 0.2f;
     private float collisionTimer;
+    public int maxHP = 40;
     public int currentHP = 40;
     public int currentDMG = 2;
     bool isKnockback;
@@ -219,39 +220,42 @@ public class PlayerTop : MonoBehaviour
 
 
     // =========================
-    // 衝突処理（ローカルのみ）
+    // 衝突処理
     // =========================
-
+  
     void OnCollisionEnter(Collision collision)
     {
         if (!isLocalPlayer) return;
-        if (collisionTimer > 0f) return;
         if (!collision.gameObject.CompareTag("Bay")) return;
-
-        SetupCursor();
 
         PlayerTop other = collision.gameObject.GetComponent<PlayerTop>();
         if (other == null) return;
 
-        collisionTimer = collisionCooldown;
+        roomModel.ReportCollision(Guid, other.Guid).Forget();
+    }
 
-        Vector3 dir = transform.position - collision.transform.position;
+    public void Hit(PlayerTop enemy)
+    {
+        if (!isLocalPlayer) return;
+        if (enemy == null) return;
+
+        SetupCursor();
+
+        Vector3 dir = transform.position - enemy.transform.position;
         dir.y = 0f;
         dir.Normalize();
 
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
 
-        // ★相手の pushForce を受け取る
-        rb.AddForce(dir * other.pushForce, ForceMode.Impulse);
+        rb.AddForce(dir * enemy.pushForce, ForceMode.Impulse);
 
-        UnityEngine.Debug.Log($"{other.pushForce}: {other.Guid}");
+        UnityEngine.Debug.Log($"{enemy.pushForce}: {enemy.Guid}");
 
-        // ★ 衝突直後に即同期
         ForceSendSync();
 
-        // ★相手のDMG分自分の体力を減らす
-        ApplyDamage(other.currentDMG);
+        ApplyDamage(enemy.currentDMG);
+ 
     }
 
     // =========================
@@ -279,6 +283,8 @@ public class PlayerTop : MonoBehaviour
         if (isDead) return;
         isDead = true;
 
+        currentHP = 0;
+
         if (moveTween != null) moveTween.Kill();
         if (rotTween != null) rotTween.Kill();
 
@@ -288,20 +294,7 @@ public class PlayerTop : MonoBehaviour
             roomModel.DeadAsync().Forget();
         }
 
-        /*
-         rb.angularVelocity = Vector3.zero;
-         rb.isKinematic = true;
-
-         Collider col = GetComponent<Collider>();
-         if (col != null)
-             col.enabled = false;
-
-         foreach (var r in GetComponentsInChildren<Renderer>())
-             r.enabled = false;
-
-         if (cursorObject != null)
-             cursorObject.SetActive(false);
-        */
+        
         Destroy(gameObject, 0.1f);
     }
 
@@ -319,18 +312,8 @@ public class PlayerTop : MonoBehaviour
         
     }
 
-    // =========================
-    // ノックバック処理
-    // =========================
-    public void OnKnockback(Guid fromId, float force)
-    {
-        ApplyKnockback(force);
-    }
 
-    void ApplyKnockback(float force)
-    {
-        rb.AddForce(transform.forward * force, ForceMode.Impulse);
-    }
+   
 
     // =========================
     //生成時代入

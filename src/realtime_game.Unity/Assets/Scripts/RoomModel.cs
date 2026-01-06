@@ -38,6 +38,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     public Action<bool> OnAllReadyStateChangedEvent;
     public Action<Guid> OnDeadBay { get; set; }
     public Action<int> OnEnd { get; set; }
+    public Action<Guid, Guid> OnHitBay { get; set; }
     public Action<Guid, Vector3, float> OnKnockbackEvent;
 
 
@@ -189,6 +190,18 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     }
 
 
+    public async UniTask ReportCollision(Guid a, Guid b)
+    {
+        if (roomHub == null)
+            return;
+
+        if (a == b)
+            return;
+
+        await roomHub.ReportCollision(a,b);
+    }
+
+
     //========================================
     // 自分のベイの死亡送信
     //========================================
@@ -243,4 +256,5 @@ public class RoomModel : BaseModel, IRoomHubReceiver
 
     public void OnGameEnd(int id) =>  OnEnd?.Invoke(id);
 
+    public void OnHit(Guid a, Guid b) => OnHitBay?.Invoke(a, b);
 }

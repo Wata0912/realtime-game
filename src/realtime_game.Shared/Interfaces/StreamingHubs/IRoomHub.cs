@@ -27,7 +27,8 @@ namespace Shared.Interfaces.StreamingHubs
         Task MoveAsync(Vector3 pos, Quaternion quaternion, int seq);
 
         Task SendSpawnPositionAsync(float x, float z);
-
+        //衝突処理
+        Task ReportCollision(Guid a, Guid b);
         Task KnockbackAsync(Guid targetId, Vector3 dir, float force);
 
         //ベイ死亡

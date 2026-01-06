@@ -6,6 +6,7 @@ using Shared.Interfaces.StreamingHubs;
 using Shared.Models;
 using System.Numerics;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 using Quaternion = UnityEngine.Quaternion;
@@ -23,7 +24,8 @@ namespace realtime_game.Server.StreamingHubs
         // 現在の接続が属しているルームの情報（部屋名・ユーザーリストなど）
         private RoomContext roomContext;
 
-
+        private readonly object collisionSync = new();
+        private readonly HashSet<string> collisionProcessing = new();
 
 
 
@@ -228,9 +230,6 @@ namespace realtime_game.Server.StreamingHubs
         }
 
 
-
-
-
         // ---------------------------------------------------------
         // ベイ移動受信
         // ---------------------------------------------------------
@@ -259,6 +258,40 @@ namespace realtime_game.Server.StreamingHubs
             roomContext.Group.All.OnKnockback(targetId, dir, force);
 
             return Task.CompletedTask;
+        }
+
+        public async Task ReportCollision(Guid a, Guid b)
+        {
+            if (a == b)
+                return;
+
+            string key = MakePairKey(a, b);
+
+            // ★ 同時実行防止だけ
+            lock (collisionSync)
+            {
+                if (collisionProcessing.Contains(key))
+                    return;
+
+                collisionProcessing.Add(key);
+            }
+
+            try
+            {
+                // ノックバック通知
+                roomContext.Group.All.OnHit(a, b);              
+            }
+            finally
+            {
+                // ★ 処理終了後に必ず解放
+                lock (collisionSync)
+                {
+                    collisionProcessing.Remove(key);
+                }
+            }
+
+            await Task.CompletedTask;
+
         }
 
 
@@ -300,9 +333,13 @@ namespace realtime_game.Server.StreamingHubs
             return Task.CompletedTask;
         }
 
-        
-
-
+        //Guid ペアを一意キーにする関数
+        private static string MakePairKey(Guid a, Guid b)
+        {
+            return string.CompareOrdinal(a.ToString(), b.ToString()) < 0
+                ? $"{a}_{b}"
+                : $"{b}_{a}";
+        }
 
     }
 }
