@@ -184,7 +184,6 @@ namespace realtime_game.Server.StreamingHubs
             await Task.CompletedTask;
         }
 
-
         private void OnAllReadyStateChanged(bool allReady)
         {
             if (roomContext == null) return;
@@ -194,11 +193,11 @@ namespace realtime_game.Server.StreamingHubs
             roomContext.Group.All.OnAllReadyStateChanged(allReady);
         }
 
-        public async Task SendSpawnPositionAsync(float x, float z)
+        public async Task SendSpawnPositionAsync(float x, float z,int type )
         {
             var ctx = roomContext;
 
-            ctx.SpawnPositions[Context.ContextId] = (x, z);
+            ctx.SpawnPositions[Context.ContextId] = (x, z, type);
 
             // 全員分揃ったか？
             if (ctx.SpawnPositions.Count < ctx.RoomUserDataList.Count)
@@ -217,16 +216,19 @@ namespace realtime_game.Server.StreamingHubs
                 PlayerId = p.Key.ToString(),
                 X = p.Value.x,
                 Z = p.Value.z,
-                BayType = 0
+                BayType = p.Value.type,
 
             }).ToArray();
 
             foreach(var item in list)
             {
-                Console.WriteLine(item.PlayerId,item.X, item.Z);
+                Console.WriteLine(item.PlayerId,item.X, item.Z,item.BayType);
             }
 
             ctx.Group.All.OnSpawnBays(list);
+
+            //一度リセット
+            ctx.SpawnPositions.Clear();
         }
 
 

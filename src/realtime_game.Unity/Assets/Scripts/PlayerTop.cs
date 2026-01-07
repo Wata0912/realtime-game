@@ -64,7 +64,6 @@ public class PlayerTop : MonoBehaviour
 
     [Header("Cursor")]
     public GameObject cursorObject;
-    [SerializeField] private Transform cursorTransform;
     [SerializeField] float stageRadius = 9f;
 
     // =========================
@@ -164,10 +163,10 @@ public class PlayerTop : MonoBehaviour
     // =========================
     void LateUpdate()
     {
-        if (cursorTransform == null) return;
+        if (cursorObject == null) return;
 
         // 親（ベイ）の回転を打ち消す
-        cursorTransform.rotation = Quaternion.identity;
+        cursorObject.transform.rotation = Quaternion.identity;
     }
 
 

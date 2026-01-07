@@ -184,9 +184,9 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         await roomHub.KnockbackAsync(targetId, dir, force);
     }
 
-    public Task SendSpawnPositionAsync(float x, float z)
+    public Task SendSpawnPositionAsync(float x, float z,int type )
     {
-        return roomHub.SendSpawnPositionAsync(x, z);
+        return roomHub.SendSpawnPositionAsync(x, z, type);
     }
 
 

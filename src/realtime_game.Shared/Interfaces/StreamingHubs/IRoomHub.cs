@@ -26,7 +26,7 @@ namespace Shared.Interfaces.StreamingHubs
         //位置同期
         Task MoveAsync(Vector3 pos, Quaternion quaternion, int seq);
 
-        Task SendSpawnPositionAsync(float x, float z);
+        Task SendSpawnPositionAsync(float x, float z, int type);
         //衝突処理
         Task ReportCollision(Guid a, Guid b);
         Task KnockbackAsync(Guid targetId, Vector3 dir, float force);

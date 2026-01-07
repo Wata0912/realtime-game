@@ -3,10 +3,14 @@ using Shared.Interfaces.StreamingHubs;
 using Shared.Models;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
+using Debug = UnityEngine.Debug;
+
 
 
 public class GameDirector : MonoBehaviour
@@ -16,21 +20,31 @@ public class GameDirector : MonoBehaviour
     [SerializeField] InputField RoomID;
     [SerializeField] InputField UserID;
     [SerializeField] Text WinnerName;
-    [SerializeField] GameObject Bayprefub;
+    [SerializeField] GameObject[] Bayprefub;
+    [SerializeField] private TMP_Dropdown bayDropdown;
     [SerializeField] UnityEngine.UI.Slider HPBer;
+    [SerializeField] Text UsersText;
 
-    RoomModel roomModel;
+    [SerializeField] GameObject playerNamePrefab;
+    [SerializeField] Transform contentTransform;
+
+// 表示済み管理（超重要）
+Dictionary<Guid, GameObject> playerNameItems = new();
+
+
+
+RoomModel roomModel;
     PlayerTop myPlayer;
     [SerializeField] public Transform stageCenter;
     
     int myUserId;
+    public int SelectedBayType { get; private set; }
     public Dictionary<Guid, RoomUser> players = new Dictionary<Guid, RoomUser>();
 
     [SerializeField] GameObject spawnCursorPrefab;
     [SerializeField] GameObject spawnButton;
     SpawnCursorController cursor;
     bool selectingSpawn;
-
     [SerializeField] GameObject spawnCursor;
 
     void Start()
@@ -49,6 +63,7 @@ public class GameDirector : MonoBehaviour
         roomModel.ConnectAsync().Forget();
         roomModel.OnAllReadyStateChangedEvent += OnAllReadyStateChanged;
         spawnCursor.SetActive(false);
+        UsersText.gameObject.SetActive(false);
     }
 
     void Update()
@@ -71,6 +86,7 @@ public class GameDirector : MonoBehaviour
         if (!int.TryParse(UserID.text, out myUserId)) return;
 
         await roomModel.JoinAsync(RoomID.text, myUserId);
+        UsersText.gameObject.SetActive(true);
         // キャラクター生成
 
     }
@@ -83,7 +99,6 @@ public class GameDirector : MonoBehaviour
         // すでに表示されているユーザーなら何もしない（重複生成防止）
         if (players.ContainsKey(user.ConnectionId))
             return;
-
 
         // キャラクター生成
         GameObject User = Instantiate(Userprefub);
@@ -104,6 +119,10 @@ public class GameDirector : MonoBehaviour
         }
         // 接続IDをキーとして保持
         players[user.ConnectionId] = userModel;
+
+      
+        RefreshPlayerNameList();
+
     }
 
     //========================================
@@ -119,14 +138,31 @@ public class GameDirector : MonoBehaviour
                 await roomModel.LeaveAsync();
                 Debug.Log("ルーム退室完了");
 
+                // --- データ削除 ---
+                players.Remove(roomModel.ConnectionId);
+
+                // 🔴 ここが重要：UIを全消し
+                foreach (var ui in playerNameItems.Values)
+                {
+                    Destroy(ui);
+                }
+
+                playerNameItems.Clear();
+                //players.Clear();
+
                 // 全キャラクターを削除（自分以外）
                 foreach (var obj in players.Values)
                 {
                     if (obj.bay != null)
+                    {
+                       
                         Destroy(obj.bay.gameObject);
+                    }
+                   
 
                     if (obj.userObject != null)
                         Destroy(obj.userObject);
+
                 }
 
                 // ローカルの一覧もクリア
@@ -136,7 +172,11 @@ public class GameDirector : MonoBehaviour
             {
                 Debug.LogError("LeaveRoom failed: " + e);
             }
+
+           
+            UsersText.gameObject.SetActive(false);
         }
+       
     }
 
 
@@ -163,7 +203,15 @@ public class GameDirector : MonoBehaviour
             }
 
             players.Remove(connectionId);  // 管理リストから削除
-            //Destroy(obj);                 // 画面から削除
+                                           //Destroy(obj);                 // 画面から削除
+
+            
+
+            if (playerNameItems.TryGetValue(connectionId, out var item))
+            {
+                Destroy(item);
+                playerNameItems.Remove(connectionId);
+            }
 
         }
         // 存在しなければ何もしない
@@ -226,6 +274,9 @@ public class GameDirector : MonoBehaviour
         //spawnCursor = Instantiate(spawnCursor);
         spawnCursor.SetActive(true);
         spawnButton.SetActive(true);
+        bayDropdown.gameObject.SetActive(true);
+        // 初期値
+        SelectedBayType = bayDropdown.value;
         //selectingSpawn = true;
     }
 
@@ -236,10 +287,15 @@ public class GameDirector : MonoBehaviour
 
         Vector3 pos = spawnCursor.transform.position;
         spawnCursor.SetActive(false);
-        spawnButton.SetActive(false);
+        spawnButton.SetActive(false);    
         //Destroy(spawnCursor);
-        Debug.Log($"POST X:{pos.x} Z:{pos.z}");
-        roomModel.SendSpawnPositionAsync(pos.x, pos.z);      
+        //仮置き　
+        SelectedBayType = bayDropdown.value;
+        bayDropdown.gameObject.SetActive(false);
+        Debug.Log($"POST X:{pos.x} Z:{pos.z} BayType:{SelectedBayType}");
+
+        
+        roomModel.SendSpawnPositionAsync(pos.x, pos.z, SelectedBayType);      
 
     }
 
@@ -278,9 +334,9 @@ public Vector3 GetCursorWorldPos()
                 continue;
 
             Vector3 pos = new Vector3(data.X, 0f, data.Z);
-            Debug.Log($"Spawn {id} at {pos}");
+            Debug.Log($"Spawn {id} at BayType{data.BayType}:{pos}");
 
-            GameObject bayObj = Instantiate(Bayprefub, pos, Quaternion.identity);
+            GameObject bayObj = Instantiate(Bayprefub[data.BayType], pos, Quaternion.identity);
             PlayerTop bay = bayObj.GetComponent<PlayerTop>();
 
             bay.stageCenter = stageCenter;
@@ -291,6 +347,7 @@ public Vector3 GetCursorWorldPos()
             bay.roomModel = roomModel;
 
             user.bay = bay;
+          
         }
 
         if (players.TryGetValue(roomModel.ConnectionId ,out var Player))
@@ -403,6 +460,36 @@ public Vector3 GetCursorWorldPos()
         roomModel.WinnerPanel.SetActive(false);
         roomModel.lobbyPanel.SetActive(true);
        
+    }
+
+    void RefreshPlayerNameList()
+    {
+        if (players == null) return;
+
+        foreach (var pair in players)
+        {
+            var id = pair.Key;
+            var user = pair.Value;
+
+            if (playerNameItems.ContainsKey(id)) continue;
+
+            GameObject item = Instantiate(playerNamePrefab, contentTransform);
+
+            Text text = item.GetComponent<Text>();
+            if (text == null)
+            {
+                Debug.LogError("playerNamePrefab に Text コンポーネントがありません");
+                Destroy(item);
+                continue;
+            }
+
+            text.text = user.userName;
+
+            // ローカルプレイヤーだけ色分け
+            text.color = user.ConnectionId == roomModel.ConnectionId? Color.yellow : Color.white;
+
+            playerNameItems[id] = item;
+        }
     }
 
 

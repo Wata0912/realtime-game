@@ -30,8 +30,8 @@ namespace realtime_game.Server.StreamingHubs
         public Dictionary<Guid, RoomUserData> RoomUserDataList { get; }
             = new Dictionary<Guid, RoomUserData>();
 
-        public Dictionary<Guid, (float x, float z)> SpawnPositions
-      = new Dictionary<Guid, (float x, float z)>();
+        public Dictionary<Guid, (float x, float z, int type)> SpawnPositions
+      = new Dictionary<Guid, (float x, float z, int type)>();
 
         // -----------------------------
         // 全員Ready状態が変化した時に呼ばれるイベント
@@ -133,7 +133,7 @@ namespace realtime_game.Server.StreamingHubs
                 {
                     Console.WriteLine(
               $"[RoomContext] Not ready: ConnectionId={user.JoinedUser.ConnectionId}"
-          );
+                     );
                     return false;
                 }
             }
@@ -183,11 +183,13 @@ namespace realtime_game.Server.StreamingHubs
                 if (user.ToReady)
                 {
                     user.ToReady = false;
-
+                    Console.WriteLine($"{user.JoinedUser.UserData.Name}:{user.ToReady}");
                 }
             }
 
             lastAllReadyState = false;
+
+           
 
             return winner;
 
