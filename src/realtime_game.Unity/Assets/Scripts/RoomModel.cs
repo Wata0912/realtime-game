@@ -18,6 +18,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
     [SerializeField] public Button LeaveButton;    // 退室ボタン
     [SerializeField] public Button JoinButton;     // 入室ボタン
     [SerializeField] public GameObject lobbyPanel;
+    [SerializeField] public GameObject Joinpanel;
     [SerializeField] public GameObject WinnerPanel;
     [SerializeField] GameObject Userprefub; //ユーザー情報所持の空オブジェクト
     RoomUser roomUser;                      //ユーザー情報所持スクリプト
@@ -47,6 +48,9 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         // 初期状態では接続していない
         roomHub = null;
         ReadyButton.interactable = false;
+        Joinpanel.SetActive(true);
+        lobbyPanel.SetActive(false);
+        WinnerPanel.SetActive(false);
     }
 
     public async UniTask ConnectAsync()
@@ -84,6 +88,10 @@ public class RoomModel : BaseModel, IRoomHubReceiver
             JoinButton.interactable = false;
             LeaveButton.interactable = true;
             ReadyButton.interactable = true;
+            Joinpanel.SetActive(false);
+            lobbyPanel.SetActive(true);
+            gameDirector.AdvanceSE();
+
         }
     }
 
@@ -109,6 +117,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         Debug.Log("[Unity] Ready button clicked");
         await roomHub.SetMyReadyAsync(true);
         ReadyButton.interactable = false;
+        gameDirector.AdvanceSE();
     }
 
     public void OnReadyStateChanged(Guid connectionId, bool isReady)
@@ -156,6 +165,9 @@ public class RoomModel : BaseModel, IRoomHubReceiver
             JoinButton.interactable = true;
             LeaveButton.interactable = false;
             ReadyButton.interactable = false;
+            Joinpanel.SetActive(true);
+            lobbyPanel.SetActive(false);
+            gameDirector.ReturnSE();
         }
     }
 

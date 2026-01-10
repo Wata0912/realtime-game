@@ -2,11 +2,14 @@ using Cysharp.Threading.Tasks;
 using Shared.Interfaces.StreamingHubs;
 using Shared.Models;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using TMPro;
+using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEngine;
+using UnityEngine.Audio;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using Debug = UnityEngine.Debug;
@@ -15,6 +18,8 @@ using Debug = UnityEngine.Debug;
 
 public class GameDirector : MonoBehaviour
 {
+
+
     [SerializeField] GameObject Userprefub;
     RoomUser roomUser;
     [SerializeField] InputField RoomID;
@@ -28,12 +33,15 @@ public class GameDirector : MonoBehaviour
     [SerializeField] GameObject playerNamePrefab;
     [SerializeField] Transform contentTransform;
 
-// 表示済み管理（超重要）
-Dictionary<Guid, GameObject> playerNameItems = new();
+    [SerializeField] Text readyText;
+    [SerializeField] Text goText;
 
+    
 
+    // 表示済み管理（超重要）
+    Dictionary<Guid, GameObject> playerNameItems = new();
 
-RoomModel roomModel;
+    RoomModel roomModel;
     PlayerTop myPlayer;
     [SerializeField] public Transform stageCenter;
     
@@ -46,6 +54,20 @@ RoomModel roomModel;
     SpawnCursorController cursor;
     bool selectingSpawn;
     [SerializeField] GameObject spawnCursor;
+
+    [Header("Sound")]
+    [SerializeField] AudioSource audioSource;
+    [SerializeField] AudioClip[] bgmClips;  //0:ロビー   1:ゲーム     2:リザルト
+    [SerializeField] float fadeTime = 1.0f;
+    [SerializeField] AudioClip hitSE;
+    [SerializeField] AudioClip advanceSE;
+    [SerializeField] AudioClip returnSE;
+
+    int currentIndex = -1;
+    Coroutine fadeCoroutine;
+
+    bool isTransitioning = false;
+    [SerializeField] float showTimeGoText = 0.3f; // 表示時間（0.2〜0.4がおすすめ）
 
     void Start()
     {
@@ -64,6 +86,10 @@ RoomModel roomModel;
         roomModel.OnAllReadyStateChangedEvent += OnAllReadyStateChanged;
         spawnCursor.SetActive(false);
         UsersText.gameObject.SetActive(false);
+        PlayBGM(0);
+        isTransitioning = false;
+        readyText.gameObject.SetActive(false);
+        goText.gameObject.SetActive(false);
     }
 
     void Update()
@@ -265,7 +291,8 @@ RoomModel roomModel;
         // フェーズ遷移・カウントダウン・操作解放など
         StartSpawnSelect();
         Debug.Log($"ベイ生成座標指定開始");
-        
+        PlayBGM(1);
+
     }
 
     //ベイ生成位置設定開始
@@ -297,6 +324,8 @@ RoomModel roomModel;
         
         roomModel.SendSpawnPositionAsync(pos.x, pos.z, SelectedBayType);      
 
+        readyText.gameObject.SetActive(true);
+
     }
 
     
@@ -321,6 +350,8 @@ public Vector3 GetCursorWorldPos()
     //========================================
     void SpawnBays(SpawnBayData[] list)
     {
+
+      
         foreach (var data in list)
         {
             Guid id = Guid.Parse(data.PlayerId);
@@ -358,6 +389,7 @@ public Vector3 GetCursorWorldPos()
         HPBer.gameObject.SetActive(true);
         HPBer.maxValue = myPlayer.maxHP;
         HPBer.value = myPlayer.currentHP;
+        StartCoroutine(ShowGo()); // ⭕
 
     }
 
@@ -366,6 +398,8 @@ public Vector3 GetCursorWorldPos()
     {
         PlayerTop LocalBay = null;
         PlayerTop RemoteBay = null;
+
+        PlayHitSE();
 
         if (players.TryGetValue(a, out var A))
         {
@@ -443,6 +477,7 @@ public Vector3 GetCursorWorldPos()
 
        WinnerName.text = "Winner " + winner;
         roomModel.WinnerPanel.SetActive(true);
+        PlayBGM(2);
     }
 
     public void Reset()
@@ -459,6 +494,7 @@ public Vector3 GetCursorWorldPos()
 
         roomModel.WinnerPanel.SetActive(false);
         roomModel.lobbyPanel.SetActive(true);
+        PlayBGM(0);
        
     }
 
@@ -492,7 +528,110 @@ public Vector3 GetCursorWorldPos()
         }
     }
 
+    public void Exit()
+    {
+        if (isTransitioning) return;
 
+        isTransitioning = true;
+        Initiate.Fade("TitleScene", Color.black, 2.0f);
+        ReturnSE();
+    }
+
+    public void PlayHitSE()
+    {
+        if (audioSource == null || hitSE == null) return;
+        audioSource.PlayOneShot(hitSE);
+    }
+    public void AdvanceSE()
+    {
+        if (audioSource == null || hitSE == null) return;
+        audioSource.PlayOneShot(advanceSE);
+    }
+    public void ReturnSE()
+    {
+        if (audioSource == null || hitSE == null) return;
+        audioSource.PlayOneShot(returnSE);
+    }
+
+    // =========================
+    // BGM 再生
+    // =========================
+    public void PlayBGM(int index)
+    {
+        if (index < 0 || index >= bgmClips.Length) return;
+        if (currentIndex == index) return;
+
+        if (fadeCoroutine != null)
+            StopCoroutine(fadeCoroutine);
+
+        fadeCoroutine = StartCoroutine(FadeAndPlay(index));
+    }
+
+    // =========================
+    // BGM 停止
+    // =========================
+    public void StopBGM()
+    {
+        if (fadeCoroutine != null)
+            StopCoroutine(fadeCoroutine);
+
+        fadeCoroutine = StartCoroutine(FadeOut());
+        currentIndex = -1;
+    }
+
+    // =========================
+    // フェード付き再生
+    // =========================
+    IEnumerator FadeAndPlay(int index)
+    {
+        // フェードアウト
+        yield return FadeOut();
+
+        audioSource.clip = bgmClips[index];
+        audioSource.volume = 0f;
+        audioSource.loop = true;
+        audioSource.Play();
+
+        currentIndex = index;
+
+        // フェードイン
+        float t = 0f;
+        while (t < fadeTime)
+        {
+            t += Time.deltaTime;
+            audioSource.volume = Mathf.Lerp(0f, 1f, t / fadeTime);
+            yield return null;
+        }
+
+        audioSource.volume = 1f;
+    }
+
+    IEnumerator FadeOut()
+    {
+        if (!audioSource.isPlaying)
+            yield break;
+
+        float startVol = audioSource.volume;
+        float t = 0f;
+
+        while (t < fadeTime)
+        {
+            t += Time.deltaTime;
+            audioSource.volume = Mathf.Lerp(startVol, 0f, t / fadeTime);
+            yield return null;
+        }
+
+        audioSource.Stop();
+        audioSource.volume = 1f;
+    }
+
+    IEnumerator ShowGo()
+    {
+        readyText.gameObject.SetActive(false);
+        goText.gameObject.SetActive(true);
+        yield return new WaitForSeconds(showTimeGoText);
+        goText.gameObject.SetActive(false);
+    }
 }
 
 

@@ -343,7 +343,7 @@ MonoBehaviour:
   moveForce: 8
   spinSpeed: 900
   centerForce: 10
-  pushForce: 8
+  pushForce: 15
   collisionCooldown: 0.2
   maxHP: 40
   currentHP: 40
@@ -353,7 +353,7 @@ MonoBehaviour:
   lerpSpeed: 12
   isDead: 0
   cursorObject: {fileID: 6634086027276726196}
-  stageRadius: 9
+  stageRadius: 11
 --- !u!136 &4949344909110223354
 CapsuleCollider:
   m_ObjectHideFlags: 0
