@@ -1,7 +1,10 @@
-﻿using MagicOnion.Server.Hubs;
+﻿using MagicOnion;
+using MagicOnion.Server;
+using MagicOnion.Server.Hubs;
 using realtime_game.Server.Models.Contexts;
 using realtime_game.Server.Models.Entities;
 using realtime_game.Server.StreamingHubs;
+using realtime_game.Shared.Interfaces.Services;
 using Shared.Interfaces.StreamingHubs;
 using Shared.Models;
 using System.Numerics;
@@ -29,10 +32,11 @@ namespace realtime_game.Server.StreamingHubs
 
 
 
-        // ---------------------------------------------------------
-        // ルームに入室（接続）する
-        // ---------------------------------------------------------
-        public async Task<JoinedUser[]> JoinAsync(string roomName, int userId)
+
+            // ---------------------------------------------------------
+            // ルームに入室（接続）する
+            // ---------------------------------------------------------
+            public async Task<JoinedUser[]> JoinAsync(string roomName, int userId)
         {
             // ルーム取得 or 作成（ここは repos を lock）
             lock (roomContextRepos)

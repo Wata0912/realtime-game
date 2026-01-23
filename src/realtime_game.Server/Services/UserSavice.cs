@@ -10,7 +10,7 @@ namespace realtime_game.Server.Services
     public class UserSavice:ServiceBase<IUserService>,IUserService
     {
         //ユーザー登録
-        public async UnaryResult<int> RegistUserAsync(string name) 
+        public async UnaryResult<User> RegistUserAsync(string name) 
         {
             using var context = new GameDbContext();
             //バリデーションチェック
@@ -28,9 +28,9 @@ namespace realtime_game.Server.Services
             user.updated_at = DateTime.Now;
             Console.WriteLine($"ユーザーネーム:{user.Name}");
             context.Users.Add(user);
-            await context.SaveChangesAsync();           
-       
-            return user.Id;
+            await context.SaveChangesAsync();
+
+            return user;
         }
 
         //ユーザー情報取得

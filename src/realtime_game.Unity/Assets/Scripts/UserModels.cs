@@ -1,29 +1,45 @@
 using Cysharp.Threading.Tasks;
-using MagicOnion.Client;
+using Grpc.Core;
 using MagicOnion;
+using MagicOnion.Client;
+using realtime_game.Server.Models.Entities;
 using realtime_game.Shared.Interfaces.Services;
 using UnityEngine;
-using Grpc.Core;
-using realtime_game.Server.Models.Entities;
+using UnityEngine.UI;
 
 public class UserModels : BaseModel
 {
-    int id;
+    User user;
+    [SerializeField] InputField UserName;
+    [SerializeField] Text ResultText;
+    [SerializeField] GameObject CreateResultPanel;
+
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    
-    public async UniTask<bool> Add(string name)
+
+    public  async UniTask<User> Add()
     {
+
+        // 入力チェック：空文字なら登録しない
+        if (string.IsNullOrEmpty(UserName.text))
+            return null;
+
         var channel = GrpcChannelx.ForAddress(ServerURL);
         var client = MagicOnionClient.Create<IUserService>(channel);
         try
         {//接続成功
-            id = await client.RegistUserAsync(name);
-            Debug.Log(id);
-            return true;
+            user = await client.RegistUserAsync(UserName.text);
+            Debug.Log($"{user.Id}:{user.Name}:{user.Token}");
+
+            ResultText.text = $"ID {user.Id}: 名前 {user.Name}";
+            CreateResultPanel.SetActive(true);
+
+            return user;
         }catch (RpcException e)
         {//接続失敗
             Debug.Log(e);
-            return false;
+            return null;
+                
         }
        
     }
@@ -44,5 +60,14 @@ public class UserModels : BaseModel
             return null;
         }
     }
+
+
+    public void OnClickAddButton()
+    {
+        Add().Forget();
+    }
+
    
+
+
 }

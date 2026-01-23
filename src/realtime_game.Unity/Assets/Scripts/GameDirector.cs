@@ -35,8 +35,8 @@ public class GameDirector : MonoBehaviour
 
     [SerializeField] Text readyText;
     [SerializeField] Text goText;
+    [SerializeField] GameObject ReadyButton;
 
-    
 
     // 表示済み管理（超重要）
     Dictionary<Guid, GameObject> playerNameItems = new();
@@ -54,6 +54,9 @@ public class GameDirector : MonoBehaviour
     SpawnCursorController cursor;
     bool selectingSpawn;
     [SerializeField] GameObject spawnCursor;
+
+    [SerializeField] GameObject CreateUserPanel;
+    [SerializeField] GameObject CreatedUserPanel;
 
     [Header("Sound")]
     [SerializeField] AudioSource audioSource;
@@ -113,6 +116,7 @@ public class GameDirector : MonoBehaviour
 
         await roomModel.JoinAsync(RoomID.text, myUserId);
         UsersText.gameObject.SetActive(true);
+        checksolo();
         // キャラクター生成
 
     }
@@ -148,7 +152,7 @@ public class GameDirector : MonoBehaviour
 
       
         RefreshPlayerNameList();
-
+        checksolo();
     }
 
     //========================================
@@ -231,8 +235,7 @@ public class GameDirector : MonoBehaviour
             players.Remove(connectionId);  // 管理リストから削除
                                            //Destroy(obj);                 // 画面から削除
 
-            
-
+           
             if (playerNameItems.TryGetValue(connectionId, out var item))
             {
                 Destroy(item);
@@ -241,6 +244,7 @@ public class GameDirector : MonoBehaviour
 
         }
         // 存在しなければ何もしない
+        checksolo();
     }
     
   
@@ -482,7 +486,6 @@ public Vector3 GetCursorWorldPos()
 
     public void Reset()
     {
-
         foreach (var obj in players.Values)
         {
             if (obj.bay != null)
@@ -494,8 +497,7 @@ public Vector3 GetCursorWorldPos()
 
         roomModel.WinnerPanel.SetActive(false);
         roomModel.lobbyPanel.SetActive(true);
-        PlayBGM(0);
-       
+        PlayBGM(0);     
     }
 
     void RefreshPlayerNameList()
@@ -536,6 +538,31 @@ public Vector3 GetCursorWorldPos()
         Initiate.Fade("TitleScene", Color.black, 2.0f);
         ReturnSE();
     }
+
+    public void CreateUser()
+    {
+        CreateUserPanel.SetActive(true);
+        AdvanceSE();
+    }
+
+    public void CreatedUser()
+    {
+        CreateUserPanel.SetActive(false);
+        CreatedUserPanel.SetActive(false);
+        AdvanceSE();
+    }
+
+    public void checksolo()
+    {
+        if(players.Count < 2)
+        {
+            ReadyButton.SetActive(false);
+        }else
+        {
+            ReadyButton.SetActive(true) ;
+        }
+    }
+
 
     public void PlayHitSE()
     {

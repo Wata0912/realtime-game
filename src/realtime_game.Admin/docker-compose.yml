@@ -14,7 +14,7 @@
 # - [docker-compose.yml] を変更した場合は downして再度up が必要
 # - [Dockerfile] を変更した場合は build が必要
 #######################################################################
-#version: '3'
+version: '3'
 
 services:
   # Webサーバーコンテナ
