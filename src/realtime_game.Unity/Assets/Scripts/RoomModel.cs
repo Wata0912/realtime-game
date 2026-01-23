@@ -91,6 +91,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
             Joinpanel.SetActive(false);
             lobbyPanel.SetActive(true);
             gameDirector.AdvanceSE();
+            gameDirector.checksolo();
 
         }
     }
