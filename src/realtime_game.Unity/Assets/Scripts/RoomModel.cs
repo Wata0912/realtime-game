@@ -1,4 +1,5 @@
 ﻿using Cysharp.Threading.Tasks;
+using Grpc.Net.Client;
 using MagicOnion;
 using MagicOnion.Client;
 using Shared.Interfaces.StreamingHubs;
@@ -13,7 +14,8 @@ using Vector3 = UnityEngine.Vector3;
 
 public class RoomModel : BaseModel, IRoomHubReceiver
 {
-    private GrpcChannelx channel;
+    private GrpcChannel channel;
+    //private GrpcChannelx channel;
     private IRoomHub roomHub;
     [SerializeField] public Button LeaveButton;    // 退室ボタン
     [SerializeField] public Button JoinButton;     // 入室ボタン
@@ -52,7 +54,7 @@ public class RoomModel : BaseModel, IRoomHubReceiver
         lobbyPanel.SetActive(false);
         WinnerPanel.SetActive(false);
     }
-
+    /*
     public async UniTask ConnectAsync()
     {
         channel = GrpcChannelx.ForAddress(ServerURL);
@@ -63,6 +65,39 @@ public class RoomModel : BaseModel, IRoomHubReceiver
 
         ConnectionId = await roomHub.GetConnectionId();
         isConnected = true;
+    }*/
+
+    // MagicOnion接続処理
+    public async UniTask ConnectAsync()
+    {
+        try
+        {
+            Debug.Log("ConnectAsync start");
+
+            channel = GrpcChannelProvider.GetChannel();
+            Debug.Log("Connecting to Hub...");
+            try
+            {
+                this.roomHub = await MagicOnion.Client.StreamingHubClient.ConnectAsync<IRoomHub, IRoomHubReceiver>(
+                    channel,
+                    this,
+                    option: commonCallOptions
+                );
+
+                Debug.Log("★Success: Connected with CallOptions Headers!");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"ConnectAsync failed: {e}");
+            }
+            Debug.Log("ConnectAsync Success!");
+            ConnectionId = await roomHub.GetConnectionId();
+            isConnected = true;
+        }
+        catch (Exception ex)
+        {
+            Debug.LogError("ConnectAsync failed: " + ex);
+        }
     }
 
     //========================================s

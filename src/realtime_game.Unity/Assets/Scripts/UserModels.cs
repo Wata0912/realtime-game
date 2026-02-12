@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using Grpc.Core;
+using Grpc.Core.Interceptors;
 using MagicOnion;
 using MagicOnion.Client;
 using realtime_game.Server.Models.Entities;
@@ -14,18 +15,39 @@ public class UserModels : BaseModel
     [SerializeField] Text ResultText;
     [SerializeField] GameObject CreateResultPanel;
 
+    private static UserModels instance;
+    public static UserModels Instance
+    {
+        get
+        {
+            if (instance == null) instance = new UserModels();
+            return instance;
+        }
+    }
+
+    private IUserService CreateClient()
+    {
+        var channel = GrpcChannelProvider.GetChannel();
+        var invoker = channel.Intercept(new GameIdInterceptor());
+        return MagicOnionClient.Create<IUserService>(invoker);
+    }
+
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
 
-    public  async UniTask<User> Add()
+
+    public async UniTask<User> Add()
     {
 
         // 入力チェック：空文字なら登録しない
         if (string.IsNullOrEmpty(UserName.text))
             return null;
 
-        var channel = GrpcChannelx.ForAddress(ServerURL);
-        var client = MagicOnionClient.Create<IUserService>(channel);
+        /*var channel = GrpcChannelx.ForAddress(ServerURL);
+        var client = MagicOnionClient.Create<IUserService>(channel);*/
+
+        var client = CreateClient();
+
         try
         {//接続成功
             user = await client.RegistUserAsync(UserName.text);
@@ -46,8 +68,10 @@ public class UserModels : BaseModel
     
     public async UniTask<User> GetUser(int id)
     {
-        var channel = GrpcChannelx.ForAddress(ServerURL);
-        var client = MagicOnionClient.Create<IUserService>(channel);
+        /*var channel = GrpcChannelx.ForAddress(ServerURL);
+        var client = MagicOnionClient.Create<IUserService>(channel);*/
+        var client = CreateClient();
+
         try
         {//接続成功
             var data = await client.GetUserAsync(id);

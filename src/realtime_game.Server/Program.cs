@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.OpenApi.Models;
 using realtime_game.Server.StreamingHubs;
 
@@ -5,11 +6,24 @@ using realtime_game.Server.StreamingHubs;
 var builder = WebApplication.CreateBuilder(args);
 
 // MagicOnion の DI セットアップ
-var magiconion = builder.Services.AddMagicOnion();
+//var magiconion = builder.Services.AddMagicOnion();
+
+// --- 1. Kestrel の設定 (Caddyとの通信に必須) ---
+builder.WebHost.ConfigureKestrel(options =>
+{
+    // 8080ポートで待受
+    options.ListenAnyIP(8080, listenOptions =>
+    {
+        // 重要: HTTP/2 専用に固定します。
+        // これにより Caddy からの h2c (暗号化なしHTTP/2) を正しく受け入れます。
+        listenOptions.Protocols = HttpProtocols.Http2;
+    });
+});
 
 //=========================================
 // 開発環境の場合のみ JsonTranscoding と Swagger を有効化
 //=========================================
+/*
 if (builder.Environment.IsDevelopment())
 {
     // MagicOnion のサービスを REST API 風に呼び出せるようにする機能
@@ -24,6 +38,7 @@ if (builder.Environment.IsDevelopment())
 //=========================================
 builder.Services.AddSwaggerGen(options =>
 {
+
     // MagicOnion のコメントを XML から読み込み、Swagger に反映
     options.IncludeMagicOnionXmlComments(
         Path.Combine(AppContext.BaseDirectory, "realtime_game.Server.xml")
@@ -41,11 +56,28 @@ builder.Services.AddSwaggerGen(options =>
 // API Explorer（Swagger がエンドポイントを取得するのに必要）
 builder.Services.AddMvcCore().AddApiExplorer();
 
+*/
 //=========================================
 // ルーム情報を管理するリポジトリ（サーバー内でメモリ管理）
 // MagicOnion の StreamingHub から使用される
 //=========================================
 builder.Services.AddSingleton<RoomContextRepository>();
+
+// MagicOnion の登録
+builder.Services.AddMagicOnion();
+
+// CORS設定
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .WithExposedHeaders("Grpc-Status", "Grpc-Message", "Grpc-Encoding", "Grpc-Accept-Encoding");
+    });
+});
+
 
 //=========================================
 // Web アプリケーションを構築（ミドルウェアパイプラインを生成）
@@ -55,6 +87,7 @@ var app = builder.Build();
 //=========================================
 // 開発環境のみ Swagger UI を有効化
 //=========================================
+/*
 if (app.Environment.IsDevelopment())
 {
     // Swagger を有効
@@ -65,7 +98,13 @@ if (app.Environment.IsDevelopment())
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "タイトル");
     });
-}
+}*/
+
+
+// --- 3. パイプライン設定 (順番が重要) ---
+app.UseRouting();
+app.UseCors("AllowAll");
+
 
 //=========================================
 // MagicOnion のサービスを実際のエンドポイントとしてマッピング
@@ -74,7 +113,9 @@ if (app.Environment.IsDevelopment())
 app.MapMagicOnionService();
 
 // テスト用の root ページ
-app.MapGet("/", () => "");
+//app.MapGet("/", () => "");
+app.MapGet("/", () => "MagicOnion Server is running (HTTP/2)");
+
 
 //=========================================
 // ASP.NET Core Web アプリケーション起動
