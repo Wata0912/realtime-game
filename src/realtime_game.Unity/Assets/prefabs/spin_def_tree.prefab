@@ -81,12 +81,12 @@ MonoBehaviour:
   userId: 0
   isLocalPlayer: 0
   roomModel: {fileID: 0}
-  moveForce: 12
+  moveForce: 10
   spinSpeed: 20
   centerForce: 5
-  pushForce: 15
+  pushForce: 10
   collisionCooldown: 0.2
-  maxHP: 40
+  maxHP: 80
   currentHP: 40
   currentDMG: 2
   knockbackLockTime: 0.15
